@@ -154,18 +154,13 @@ sub _get_previous {
     {
         $base->subtract( $unit => 1 )
             while ( $base + $min->[0] ) >= $self;
-
         my $j = 0;
         my $next;
         my $i;
-        while(1) {
-
-            for ( $i = $#{ $duration->[$j] }; $i >= 0; $i-- ) {
-                # my $next = $base->clone;
-                # $next->add_duration( $duration->[$j][$i] );
-                # return $next if $next < $self;
-
-
+        while(1) 
+        {
+            for ( $i = $#{ $duration->[$j] }; $i >= 0; $i-- ) 
+            {
                 $next = $base + $duration->[$j][$i];
                 # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
                 if ( $j == $#{$duration} ) 
@@ -184,9 +179,9 @@ sub _get_previous {
             }
 
             $base = $next;
-
             # print " opt0: ".$base->datetime."  \n";
-            if ( $j >= $#{$duration} ) {
+            if ( $j >= $#{$duration} ) 
+            {
                 # print "#0\n";
                 return $base; 
             }
@@ -208,15 +203,13 @@ sub _get_next {
     {
         $base->add( $unit => 1 )
             while ( $base + $max->[0] ) <= $self;
-
-        # print " self ".$self->datetime." n $#{$duration} \n";
-
         my $j = 0;
         my $next;
         my $i;
-        while(1) {
-
-            for $i ( 0 .. $#{ $duration->[$j] } ) {
+        while(1) 
+        {
+            for $i ( 0 .. $#{ $duration->[$j] } ) 
+            {
                 $next = $base + $duration->[$j][$i];
                 # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
                 if ( $j == $#{$duration} ) 
@@ -235,9 +228,9 @@ sub _get_next {
             }
 
             $base = $next;
-
             # print " opt0: ".$base->datetime."  \n";
-            if ( $j >= $#{$duration} ) {
+            if ( $j >= $#{$duration} ) 
+            {
                 # print "#0\n";
                 return $base; 
             }
