@@ -1,3 +1,4 @@
+- added a dispatch table for "offset" calculations
 - fixed and added tests for monthly( week => ...)
 - modified "sort positive values first". Patch by Yitzchak Scott-Thoennes.
 - refactored _setup_parameters()

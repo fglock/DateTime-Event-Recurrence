@@ -37,22 +37,22 @@ sub union {
     %op1 = ( $self->get_ical ) if ( UNIVERSAL::can( $self, 'get_ical' ) );
     %op2 = ( $_[0]->get_ical ) if ( UNIVERSAL::can( $_[0], 'get_ical' ) );
     return $new if ( ( exists $op1{exclude} ) ||
-		     ( exists $op2{exclude} ) );
+                     ( exists $op2{exclude} ) );
 
     bless $new, 'DateTime::Set::ICal';
     # warn " -- 1 isa @{[%op1]} -- 2 isa @{[%op2]} -- ";
     my @ical;
     @ical = exists $op1{include} ? 
-	    @{$op1{include}} : 
-	    $self;
+            @{$op1{include}} : 
+            $self;
 
     if ( exists $op2{include} )
     {
-	push @ical, @{$op2{include}};
+        push @ical, @{$op2{include}};
     }
     else
     {
-	push @ical, @_;  # whatever...
+        push @ical, @_;  # whatever...
     }
     # warn "union: @ical";
     $new->set_ical( include => [ @ical ] ); 
@@ -74,8 +74,8 @@ sub complement {
     # warn " -- 1 isa @{[%op1]} -- 2 isa @{[%op2]} -- ";
     my ( @include, @exclude );
     @include = exists $op1{include} ?
-	       @{$op1{include}} :
-	       $self;
+               @{$op1{include}} :
+               $self;
 
     @exclude = exists $op1{exclude} ?
                @{$op1{exclude}} :
@@ -83,11 +83,11 @@ sub complement {
 
     if ( exists $op2{include} )
     {
-	push @exclude, @{$op2{include}};
+        push @exclude, @{$op2{include}};
     }
     else
     {
-	push @exclude, @_;  # whatever...
+        push @exclude, @_;  # whatever...
     }
     # warn "complement: include @include exclude @exclude";
     $new->set_ical( include => [ @include ], exclude => [ @exclude ] ); 
@@ -110,6 +110,7 @@ use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
 # -------- BASE OPERATIONS
 
 use vars qw( 
+    %as_number
     %truncate %next_unit %previous_unit 
     %weekdays %weekdays_1 
     $dur_month $dur_neg_month 
@@ -153,34 +154,49 @@ sub _add {
 }
 
 # internal subs to get date parameters
+# TODO: %as_number should use the "subtract" routines from DateTime
 
-sub _week_year {
-    # get the internal year number, in 'week' mode
-    # the datetime must be near the beginning of the year!
-    return $_[0]->clone->add_duration( $dur_month )->year;
-}
-
-sub _month {
-    # get the internal year+month number
-    return 12 * $_[0]->year + $_[0]->month - 1 ;
-}
-
-sub _day { $_[0]->{local_rd_days} }
-
-sub _week {
-    # get the internal week number
-    # $_[1] is the "week start day"
-    use integer;
-    return ( _day( $_[0] ) - $_[1] ) / 7;
-}
-
-sub _hour { _day($_[0]) * 24 + $_[0]->hour }
-
-sub _minute { _hour($_[0]) * 60 + $_[0]->minute }
-
-sub _second { _minute($_[0]) * 60 + $_[0]->second }
-  # my $seconds = 86400 * _day($tmp) + $tmp->{local_rd_secs};
-  # a 11-digit number (floats have 15-digits in linux/win)
+%as_number = (
+    years => sub { 
+        $_[0]->year 
+    },
+    months => sub {
+        12 * $_[0]->year + $_[0]->month - 1
+    },
+    days => sub { 
+        $_[0]->{local_rd_days} 
+    },
+    weeks => sub {
+        # $_[1] is the "week start day"
+        use integer;
+        return ( $as_number{days}( $_[0] ) - $_[1] ) / 7;
+    },
+    hours => sub { 
+        $as_number{days}($_[0]) * 24 + $_[0]->hour 
+    },
+    minutes => sub { 
+        $as_number{hours}($_[0]) * 60 + $_[0]->minute 
+    },
+    seconds => sub { 
+        $as_number{minutes}($_[0]) * 60 + $_[0]->second 
+        # TODO: missing support for leapseconds
+        # my $seconds = 86400 * _day($tmp) + $tmp->{local_rd_secs};
+    },
+    years_weekly => sub {
+        # get the internal year number, in 'week' mode
+        # the datetime must be near the beginning of the year!
+        my $base = $_[0]->clone;
+        _add( $base, months => 1 );
+        return $as_number{years}( $base );
+    },
+    months_weekly => sub {
+        # get the internal month number, in 'week' mode
+        # the datetime must be near the beginning of the year!
+        my $base = $_[0]->clone;
+        _add( $base, weeks => 1 );
+        return $as_number{months}( $base );
+    },
+);
 
 
 %truncate = (
@@ -232,9 +248,9 @@ sub _second { _minute($_[0]) * 60 + $_[0]->second }
 
     years_weekly => sub {
         my $tmp;
-        my $base = $_[0]->clone->
-                          add_duration( $dur_month )->
-                          truncate( to => 'year' );
+        my $base = $_[0]->clone;
+        _add( $base, months => 1 );
+        $base->truncate( to => 'year' );
         my $val;
         my $diff;
         while(1) {
@@ -321,59 +337,31 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 %truncate_interval = (
     # @_ = ( date, $args )
 
-    # TODO: auto-generate these subs
-    
-    years   => sub { 
-        my $tmp = $_[0]->clone;
-        $tmp->truncate( to => 'year' );
-        _add( $tmp, years => $_[1]{offset} - ( $_[0]->year % $_[1]{interval} ) );
-        _add( $tmp, years => - $_[1]{interval} ) if $tmp > $_[0];
-        return $tmp;
-    },
-
-    months  => sub { 
-        my $tmp = $_[0]->clone;
-        $tmp->truncate( to => 'month' );
-        _add( $tmp, months => $_[1]{offset} - ( _month($_[0]) % $_[1]{interval} ) );
-        _add( $tmp, months => - $_[1]{interval} ) if $tmp > $_[0];
-        return $tmp;
-    },
-
-    days  => sub { 
-        my $tmp = $_[0]->clone;
-        $tmp->truncate( to => 'day' );
-        _add( $tmp, days => $_[1]{offset} - ( _day($_[0]) % $_[1]{interval} ) );
-        _add( $tmp, days => - $_[1]{interval} ) if $tmp > $_[0];
-        return $tmp;
-    },
-
-    hours  => sub {
-        my $tmp = $_[0]->clone;
-        $tmp->truncate( to => 'hour' );
-        _add( $tmp, hours => $_[1]{offset} - ( _hour($_[0]) % $_[1]{interval} ) );
-        _add( $tmp, hours => - $_[1]{interval} ) if $tmp > $_[0];
-        return $tmp;
-    },
-
-    minutes  => sub {
-        my $tmp = $_[0]->clone;
-        $tmp->truncate( to => 'minute' );
-        _add( $tmp, minutes => $_[1]{offset} - ( _minute($_[0]) % $_[1]{interval} ) );
-        _add( $tmp, minutes => - $_[1]{interval} ) if $tmp > $_[0];
-        return $tmp;
-    },
-
-    seconds  => sub {
-        my $tmp = $_[0]->clone;
-        $tmp->truncate( to => 'second' );
-        _add( $tmp, seconds => $_[1]{offset} - ( _second($_[0]) % $_[1]{interval} ) );
-        _add( $tmp, seconds => - $_[1]{interval} ) if $tmp > $_[0];
-        return $tmp;
-    },
+    (
+        map { 
+              my $names = $_;
+              my $name = $_; 
+              $name =~ s/s$//;
+              $_ => sub { 
+                           my $tmp = $_[0]->clone;
+                           $tmp->truncate( to => $name );
+                           _add( $tmp, $names => 
+                                     $_[1]{offset} - 
+                                     ( $as_number{$names}($_[0]) %
+                                       $_[1]{interval} 
+                                     ) 
+                               );
+                           _add( $tmp, $names => - $_[1]{interval} ) 
+                               if $tmp > $_[0];
+                           return $tmp;
+                        } 
+            } qw( years months days hours minutes seconds )
+    ),
 
     weeks   => sub { 
         my $tmp = $truncate{weeks}->( $_[0], $_[1] );
-        while ( $_[1]{offset} != ( _week( $tmp, $weekdays_1{ $_[1]{week_start_day} } ) % $_[1]{interval} ) )
+        while ( $_[1]{offset} != 
+                ( $as_number{weeks}( $tmp, $weekdays_1{ $_[1]{week_start_day} } ) % $_[1]{interval} ) )
         {
             $previous_unit{weeks}->( $tmp, $_[1] );
         }
@@ -382,7 +370,8 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 
     months_weekly => sub {
         my $tmp = $truncate{months_weekly}->( $_[0], $_[1] );
-        while ( $_[1]{offset} != ( _month( $tmp ) % $_[1]{interval} ) )
+        while ( $_[1]{offset} != 
+                ( $as_number{months_weekly}( $tmp ) % $_[1]{interval} ) )
         {
             $previous_unit{months_weekly}->( $tmp, $_[1] );
         }
@@ -391,7 +380,8 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 
     years_weekly => sub {
         my $tmp = $truncate{years_weekly}->( $_[0], $_[1] );
-        while ( $_[1]{offset} != ( _week_year( $tmp ) % $_[1]{interval} ) ) 
+        while ( $_[1]{offset} != 
+                ( $as_number{years_weekly}( $tmp ) % $_[1]{interval} ) ) 
         {
             $previous_unit{years_weekly}->( $tmp, $_[1] );
         }
@@ -681,6 +671,7 @@ sub _setup_parameters {
             $level++;
     }
 
+    # TODO: move this up
     if ( $base eq 'weeks' ) 
     {
         my ($by) = $ical_string =~ /(BYMONTHDAY=.*?)(;|$)/;
@@ -697,7 +688,7 @@ sub _setup_parameters {
         }
     }
     
-    if ( $start && $interval )
+    if ( $start && $interval > 1 )
     {
             # get offset 
             my $tmp = $truncate_interval{ $base }->( 
@@ -708,38 +699,23 @@ sub _setup_parameters {
                       week_start_day => $week_start_day,
                     }
                 );
-            # print STDERR "start: ".$start->datetime."\n";
-            # print STDERR "base: ".$tmp->datetime." $base\n";
-
-            # must use the same difference algorithm as the subs above.
-
-            if ( $base eq 'years' ) {
-                $offset = $start->year - $tmp->year;
-                $offset = $start->year_week - $tmp->year_week 
-                    if exists $args{weeks};
+            my $start1 = $start;
+            if ( $base_unit eq 'years_weekly' ||
+                 $base_unit eq 'months_weekly' ) 
+            {
+                my $start1 = $truncate{ $base_unit }->(
+                        $start,
+                        {
+                            week_start_day => $week_start_day,
+                        }
+                    );
             }
-            elsif ( $base eq 'months' ) {
-                $offset = _month( $start ) - _month( $tmp );
-            }
-            elsif ( $base eq 'weeks' ) {
-                $offset = _week( $start, $weekdays_1{ $week_start_day } ) - 
-                          _week( $tmp, $weekdays_1{ $week_start_day } );
-            }
-            elsif ( $base eq 'days' ) {
-                $offset = _day($start) - _day($tmp);
-            }
-            elsif ( $base eq 'hours' ) {
-                $offset = _hour($start) - _hour($tmp);
-            }
-            elsif ( $base eq 'minutes' ) {
-                $offset = _minute($start) - _minute($tmp);
-            }
-            elsif ( $base eq 'seconds' ) {
-                $offset = _second($start) - _second($tmp);
-            }
-
-            $offset = $offset % $interval if defined $interval;
-
+            $offset = 
+                $as_number{$base_unit}( $start1, 
+                                        $weekdays_1{$week_start_day} ) - 
+                $as_number{$base_unit}( $tmp, 
+                                        $weekdays_1{$week_start_day} );
+            $offset = $offset % $interval;
     }
     else 
     {
