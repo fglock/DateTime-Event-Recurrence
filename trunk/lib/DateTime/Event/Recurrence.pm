@@ -8,8 +8,8 @@ use DateTime::Set;
 use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
-@ISA     = qw( DateTime::Set Exporter );
-$VERSION = '0.00_10';
+@ISA     = qw( Exporter );
+$VERSION = '0.01';
 
 # debug!
 use Data::Dumper;
@@ -32,7 +32,7 @@ BEGIN {
             sub ".__PACKAGE__."::$namely {
                 my \$class = shift;
                 my ( \$duration, \$min, \$max ) = \&_setup_parameters;  # needs \&
-                return DateTime::Event::Recurrence->SUPER::from_recurrence(
+                return DateTime::Set->from_recurrence(
                    next => sub { 
                        my \$tmp = \$_[0]->clone;
                        \$tmp->truncate( to => '$name' );
@@ -55,7 +55,7 @@ BEGIN {
 sub weekly {
     my $class = shift;
     my ( $duration, $min, $max ) = &_setup_parameters;  # needs &
-    return DateTime::Event::Recurrence->SUPER::from_recurrence(
+    return DateTime::Set->from_recurrence(
         next => sub { 
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
