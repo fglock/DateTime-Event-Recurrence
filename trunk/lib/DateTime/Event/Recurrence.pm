@@ -958,6 +958,9 @@ sub _get_occurence_by_index {
 
 sub _get_previous {
     my ( $self, $args ) = @_;
+
+    return $self if $self->is_infinite;
+
     my $base = $args->{truncate}->( $self, $args );
 
     if ( $args->{duration} ) 
@@ -1019,6 +1022,9 @@ sub _get_previous {
 
 sub _get_next {
     my ( $self, $args ) = @_;
+
+    return $self if $self->is_infinite;
+
     my $base = $args->{truncate}->( $self, $args );
 
     if ( $args->{duration} ) 
