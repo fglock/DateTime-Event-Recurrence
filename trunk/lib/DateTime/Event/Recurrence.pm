@@ -1061,6 +1061,27 @@ and then at each 11 days, I<before and after> C<$dt>:
         2003-06-15T10:30:00, 
         2003-06-26T10:30:00, ... 
 
+=head2 Week start day
+
+The C<week_start_day> parameter is intended for
+internal use by the C<DateTime::Event::ICal> module,
+for generating RFC2445 recurrences.
+
+The C<week_start_day> represents how
+the 'first week' of a period is calculated:
+
+'mo' - this is the default. The first week is
+one that starts in monday, and has I<the most days> in
+this period. Works only for C<yearly> recurrences.
+
+'tu', 'we', 'th', 'fr', 'sa', 'su' - The first week is
+one that starts in this week-day, and has I<the most days> in
+this period. Works only for C<yearly> recurrences.
+
+'1tu', '1we', '1th', '1fr', '1sa', '1su' - The first week is
+one that starts in this week-day, and has I<all days> in
+this period. Works for C<yearly> and C<monthly> recurrences.
+
 =head1 AUTHOR
 
 Flavio Soibelmann Glock
