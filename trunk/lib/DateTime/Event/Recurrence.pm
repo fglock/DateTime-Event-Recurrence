@@ -28,26 +28,32 @@ BEGIN {
     while ( @freq ) 
     {
         my ( $name, $names, $namely ) = ( shift @freq, shift @freq, shift @freq );
-        my $sub = "
-            sub ".__PACKAGE__."::$namely {
-                my \$class = shift;
-                my ( \$duration, \$min, \$max ) = _setup_parameters(\@_);
-                return DateTime::Set->from_recurrence(
-                   next => sub { 
-                       my \$tmp = \$_[0]->clone;
-                       \$tmp->truncate( to => '$name' );
-                       _get_next( \$_[0], \$tmp, '$names', \$duration, \$min, \$max );
-                   },
-                   previous => sub {
-                       my \$tmp = \$_[0]->clone;
-                       \$tmp->truncate( to => '$name' );
-                       _get_previous( \$_[0], \$tmp, '$names', \$duration, \$min, \$max );
-                   } 
-                 );
-            } ";
-        # warn $sub;
-        eval $sub;
-        warn $@ if $@;
+
+        no strict 'refs';
+        *{__PACKAGE__ . "::$namely"} =
+            sub { use strict 'refs';
+                  my $class = shift;
+
+                  my ( $duration, $min, $max ) = _setup_parameters(@_);
+
+                  my $next =
+                      sub { my $tmp = $_[0]->clone;
+                            $tmp->truncate( to => $name );
+                            _get_next( $_[0], $tmp, $names,
+                                       $duration, $min, $max ); };
+
+                  my $prev =
+                      sub { my $tmp = $_[0]->clone;
+                            $tmp->truncate( to => $name );
+                            _get_previous( $_[0], $tmp, $names,
+                                           $duration, $min, $max ); };
+
+                  return
+                      DateTime::Set->from_recurrence
+                              ( next     => $next,
+                                previous => $prev,
+                              );
+                };
     }
 } # BEGIN
 
