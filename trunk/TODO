@@ -8,6 +8,7 @@ TODO list for Perl module DateTime::Event::Recurrence
     week_start_day => '1mo'  -- yearly and monthly 
 
   - add tests with 'interval' > 1
+  - add 'previous' tests
 
 * start parameter
   - is it just for synchronizing the interval?

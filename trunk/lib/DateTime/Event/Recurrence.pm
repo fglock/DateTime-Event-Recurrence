@@ -33,6 +33,11 @@ sub _week_year {
     return $_[0]->clone->add( months => 1 )->year;
 }
 
+sub _month {
+    # get the year+month number
+    return 12 * $_[0]->year + $_[0]->month - 1 ;
+}
+
 %truncate = (
     (
         map {
@@ -103,12 +108,14 @@ sub _week_year {
     ),
 
     months_weekly => sub {
-        my $month = $truncate{months_weekly}( $_[0], $_[1] )->month;
+        my $month = _month( $truncate{months_weekly}( $_[0], $_[1] ) );
         my $base = $_[0]->clone;
         do {
             $base->add( days => 21 );
             $_[0] = $truncate{months_weekly}( $base, $_[1] );
-        } while $month >= $_[0]->month;
+            # print STDERR "next $month ".$_[0]->month."\n";
+        } while $month >= _month( $_[0] );
+        # print STDERR "next month ".$_[0]->datetime."\n";
         return $_[0];
     },
 
@@ -132,12 +139,12 @@ sub _week_year {
     ),
 
     months_weekly => sub {
-        my $month = $truncate{months_weekly}( $_[0], $_[1] )->month;
+        my $month = _month( $truncate{months_weekly}( $_[0], $_[1] ) );
         my $base = $_[0]->clone;
         do {
             $base->add( days => -21 );
             $_[0] = $truncate{months_weekly}( $base, $_[1] );
-        } while $month <= $_[0]->month;
+        } while $month <= _month( $_[0] );
         return $_[0];
     },
 
@@ -177,7 +184,7 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
     months  => sub { 
         my $tmp = $_[0]->clone;
 
-        my $months = 12 * $_[0]->year + $_[0]->month - 1 ;
+        my $months = _month( $_[0] );
 
         # print STDERR "datetime ".$tmp->datetime." months $months\n";
 
@@ -244,11 +251,9 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 
     months_weekly => sub {
         my $tmp = $truncate{years_weekly}( $_[0], $_[1] );
-        my $months = 12 * $tmp->year + $tmp->month - 1 ;
-        while ( $_[1]{offset} != ( $months % $_[1]{interval} ) )
+        while ( $_[1]{offset} != ( _month( $tmp ) % $_[1]{interval} ) )
         {
             $previous_unit{months_weekly}( $tmp, $_[1] );
-            $months = 12 * $tmp->year + $tmp->month - 1 ;
         }
         return $tmp;
     },

@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 6;
+use Test::More tests => 9;
 use DateTime;
 use DateTime::Event::Recurrence;
 
@@ -61,11 +61,11 @@ sub calc
         '2004-01-06T00:00:00 2005-01-04T00:00:00 2006-01-03T00:00:00',
         "yearly-weekly 1tu" );
 
-__END__
+
 
     # MONTHLY
 
-    $dt2 = new DateTime( year => 2004, month => 5, day => 01,
+    $dt2 = new DateTime( year => 2004, month => 2, day => 01,
                            hour => 12, minute => 10, second => 45,
                            nanosecond => 123456,
                            time_zone => 'UTC' );
@@ -73,19 +73,19 @@ __END__
     my $monthly = monthly DateTime::Event::Recurrence(
            weeks => 1, week_start_day => '1mo' );
     is( calc( $monthly ),
-        '2003-12-29T00:00:00 2005-01-03T00:00:00 2006-01-02T00:00:00',
+        '2003-05-05T00:00:00 2003-06-02T00:00:00 2003-07-07T00:00:00 2003-08-04T00:00:00 2003-09-01T00:00:00 2003-10-06T00:00:00 2003-11-03T00:00:00 2003-12-01T00:00:00 2004-01-05T00:00:00',
         "monthly-weekly 1mo" );
 
     $monthly = monthly DateTime::Event::Recurrence(
            weeks => 1, week_start_day => '1su' );
     is( calc( $monthly ),
-        '2003-12-29T00:00:00 2005-01-03T00:00:00 2006-01-02T00:00:00',
+        '2003-05-04T00:00:00 2003-06-01T00:00:00 2003-07-06T00:00:00 2003-08-03T00:00:00 2003-09-07T00:00:00 2003-10-05T00:00:00 2003-11-02T00:00:00 2003-12-07T00:00:00 2004-01-04T00:00:00 2004-02-01T00:00:00',
         "monthly-weekly 1su" );
 
     $monthly = monthly DateTime::Event::Recurrence(
            weeks => 1, week_start_day => '1tu' );
     is( calc( $monthly ),
-        '2003-12-29T00:00:00 2005-01-03T00:00:00 2006-01-02T00:00:00',
+        '2003-05-06T00:00:00 2003-06-03T00:00:00 2003-07-01T00:00:00 2003-08-05T00:00:00 2003-09-02T00:00:00 2003-10-07T00:00:00 2003-11-04T00:00:00 2003-12-02T00:00:00 2004-01-06T00:00:00',
         "monthly-weekly 1tu" );
 
 
