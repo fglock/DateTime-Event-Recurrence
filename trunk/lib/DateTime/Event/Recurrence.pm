@@ -127,7 +127,11 @@ sub yearly {
     my $class = shift;
     my %args = @_;
 
-    my $year_type = delete $args{year_type} || 'monthly';
+    my $year_type;
+    $year_type = delete $args{year_type} || 
+                 exists $args{weeks} ? 
+                        'weekly' : 
+                        'monthly';
 
     my $week_start_day;
     if ( $year_type eq 'weekly' ) {

@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use DateTime;
 use DateTime::Event::Recurrence;
 
@@ -56,6 +56,18 @@ use DateTime::Event::Recurrence;
 
     $yearly = yearly DateTime::Event::Recurrence(
                          year_type => 'weekly',
+                         weeks => [ -1, 2 ] );
+    @dt = $yearly->as_list( start => $dt1, end => $dt2 );
+    $r = join(' ', map { $_->datetime } @dt);
+    is( $r,
+        '2003-12-22T00:00:00 2004-01-05T00:00:00 '.
+        '2004-12-27T00:00:00 2005-01-10T00:00:00 '.
+        '2005-12-26T00:00:00 2006-01-09T00:00:00',
+        "yearly-weekly week -1, 2" );
+
+    # YEARLY TYPE AUTO-DETECTION
+    $yearly = yearly DateTime::Event::Recurrence(
+                         # year_type => 'weekly',
                          weeks => [ -1, 2 ] );
     @dt = $yearly->as_list( start => $dt1, end => $dt2 );
     $r = join(' ', map { $_->datetime } @dt);
