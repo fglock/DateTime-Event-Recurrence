@@ -5,10 +5,11 @@ require Exporter;
 use Carp;
 use DateTime;
 use DateTime::Set;
+use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.00_01';
+$VERSION = '0.00_02';
 
 # -------- CONSTRUCTORS
 
@@ -40,7 +41,22 @@ BEGIN {
     }
 } # BEGIN
 
+
+sub weekly {
+    my $class = shift;
+    # day_of_week_0 = 0-6 (Monday is 0)
+    carp "weekly takes no arguments" if @_;
+    bless {
+        next => sub { 
+            $_[0]->truncate( to => 'day' )
+                 ->subtract( days => $_[0]->day_of_week_0 )
+                 ->add( days => 7 ) 
+        }
+    }, $class;
+}
+
 # ------- ACCESSORS
+# these are inheritable by other DateTime::Event::xxx classes
 
 sub as_set {
     my $self = shift;
@@ -58,14 +74,36 @@ sub as_list {
     $self->as_set->intersection( $span )->as_list;
 }
 
-sub is_event {
+sub contains {
     my $self = shift;
     $self->as_set->intersects( $_[0] );
 }
 
 sub next {
     my $self = shift;
-    $self->{next} ( $_[0] );
+    $self->{next} ( $_[0]->clone );
+}
+
+sub current {
+    my $self = shift;
+    return $_[0] if $self->contains( $_[0] );
+    $self->previous( $_[0] );
+}
+
+sub previous {
+    # TODO: optimize this!
+    my $self = shift;
+    my $span = new DateTime::Span( before => $_[0] );
+    return $self->as_set->intersection( $span )->previous;
+}
+
+sub closest {
+    my $self = shift;
+    # return $_[0] if $self->contains( $_[0] );
+    my $dt1 = $self->current( $_[0] );
+    my $dt2 = $self->next( $_[0] );
+    return $dt1 if ( $_[0] - $dt1 ) <= ( $dt2 - $_[0] );
+    return $dt2;
 }
 
 =head1 NAME
@@ -86,7 +124,9 @@ DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurr
 
  my $dt_next = $daily->next( $dt );
 
- my $bool = $daily->is_elem( $dt );
+ my $dt_previous = $daily->previous( $dt );
+
+ my $bool = $daily->contains( $dt );
 
  my $set_days = $r_daily->as_set( start =>$dt1, end=>$dt2 );
 
@@ -104,11 +144,15 @@ This module will return a DateTime Recurrence object for a given recurrence rule
 
 =head1 USAGE
 
-=item yearly monthly daily hourly minutely secondly
+=over 4
+
+=item * yearly monthly weekly daily hourly minutely secondly
 
  my $r_daily = daily DateTime::Event::Recurrence;
 
 Build a DateTime::Event::Recurrence object.
+
+C<weekly> returns I<mondays>.
 
 =item * as_set
 
@@ -122,9 +166,23 @@ This builds a DateTime::Set recurrence set.
 
 This builds a DateTime array of events that happen inside the span.
 
-=item * is_event
+=item * previous current next closest
 
-  my $bool = $r_daily->is_event( $dt );
+  my $dt = $r_daily->next( $dt );
+
+  my $dt = $r_daily->previous( $dt );
+
+Returns an event related to a datetime.
+
+C<current> returns $dt if $dt is an event. 
+It returns previous event otherwise.
+
+C<closest> returns $dt if $dt is an event. 
+Otherwise it returns the closest event (previous or next).
+
+=item * contains
+
+  my $bool = $r_daily->contains( $dt );
 
 Verify if a DateTime is a recurrence event.
 
