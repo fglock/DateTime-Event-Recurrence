@@ -9,7 +9,7 @@ use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.00_08';
+$VERSION = '0.00_09';
 
 # debug!
 use Data::Dumper;
@@ -76,17 +76,41 @@ sub weekly {
 # method( duration => [ [ $dur, $dur, $dur ] ] )
 # method( hours => 10 )
 # method( hours => 10, minutes => 30 )
+# method( hours => [ 6, 12, 18 ], minutes => [ 20, 40 ] )
 # method( duration => [ [ $dur, $dur ], 
 #                       [ $dur, $dur ] ] )
 
 sub _setup_parameters {
     my %args = @_;
+
     my $duration;  
-    if ( exists $args{ duration } ) {
+    if ( exists $args{ duration } ) 
+    {
         $duration = delete $args{ duration };
-        $duration = [ [ $duration ] ] if ref( $duration ) ne 'ARRAY';
+        if ( ref( $duration ) ne 'ARRAY' ) 
+        {
+            $duration = [ [ $duration ] ];
+        }
+        else {
+            die "argument 'duration' must be an array of arrays"
+                if ( ref( @{$duration}[0] ) ne 'ARRAY' ) 
+        }
     }
-    $duration = [ [ new DateTime::Duration( %args ) ] ] if keys %args; 
+    elsif ( keys %args ) {
+        my $level = 0;
+        for my $unit ( qw( months weeks days hours minutes seconds nanoseconds ) ) {
+            if ( exists $args{$unit} ) {
+                $args{$unit} = [ $args{$unit} ] 
+                    unless ref( $args{$unit} ) eq 'ARRAY';
+                @{$duration}[ $level ] = [];
+                push @{@{$duration}[ $level ]}, 
+                    new DateTime::Duration( $unit => $_ ) 
+                    for sort @{$args{$unit}};
+                $level++;
+            } 
+        }
+    }
+
 
     my @min;
     my @max;
@@ -354,10 +378,29 @@ The constructors do not check for duration overflow, such as
 a duration bigger than the period. The behaviour in this case is 
 undefined and it might change between versions.
 
-The constructors also accept "multi-level" durations, such as
+Note that the 'hours' duration is affected by DST changes
+and might return unexpected results.
+
+The constructors can also accept "multi-level" durations, such as
 the ones used by C<crontab> and in C<RFC2445>. 
 
-Multi-level durations are specified as an Array-of-Arrays.
+    my $daily = daily DateTime::Event::Recurrence ( 
+        hours => [ -1, 10, 14 ],
+        minutes => [ -15, 30, -15 ] );
+
+specifies a recurrence occuring everyday at these 9 different times:
+
+  09:45,  10:15,  10:30,    # 10h ( -15 / +15 / +30 minutes )
+  13:45,  14:15,  14:30,    # 14h ( -15 / +15 / +30 minutes )
+  22:45,  23:15,  23:30,    # -1h ( -15 / +15 / +30 minutes )
+
+This is a recurrence occuring every 30 seconds:
+
+    my $half_minute = minutely DateTime::Event::Recurrence ( 
+        seconds => [ 0, 30 ] );
+
+Multi-level durations can also be specified as an Array-of-Arrays
+of duration objects:
 
   # specify a daily recurrence with hours and minutes
   my $daily = daily DateTime::Event::Recurrence ( 
@@ -375,13 +418,8 @@ Multi-level durations are specified as an Array-of-Arrays.
      ] 
   );
 
-specifies a recurrence occuring everyday at these 9 different times:
 
-  09:45,  10:15,  10:30,    # 10h ( -15 / +15 / +30 minutes )
-  13:45,  14:15,  14:30,    # 14h ( -15 / +15 / +30 minutes )
-  22:45,  23:15,  23:30,    # -1h ( -15 / +15 / +30 minutes )
-
-The durations in a multi-level specification I<must> be ordered.
+The durations in an Array-of-Arrays specification I<must> be ordered.
 
 =item * as_set
 

@@ -3,20 +3,19 @@ TODO list for Perl module DateTime::Event::Recurrence
 * check what are the minimum dependencies requirements 
   and fill in at Makefile.PL
 
+* count hours backwards, in order to avoid DST changes
+  which usually occur in the first hours of the day
+
 * new units:
 
   weekly_year  => first day of first week of year, such that
                   we can get week #34 by adding 33 weeks!
 
-* possible syntax to generate the datetime matrix:
-
-    $r = DT::E::R->monthly (
-                       days => [ 4, 15, 18 ],
-                       hours => [ 10, 20 ] );
-
 * datetime matrix implementation
 
-  - sort each unit, then iterate using binary search
+  - sort each unit ?
+
+  - iterate using binary search
 
 * experimental code
 
