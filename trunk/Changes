@@ -1,3 +1,7 @@
+0.05   2003-05-23
+- memoizes durations; makes less calls to DT::Duration->new
+- 'weekly' can use 'week_start_day'
+
 0.04   2003-05-14
 - turn on warnings in tests and fix all warnings given.
 - require DateTime::Set 0.06
