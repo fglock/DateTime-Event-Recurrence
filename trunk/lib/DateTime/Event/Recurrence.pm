@@ -60,7 +60,7 @@ BEGIN {
 
 sub weekly {
     my $class = shift;
-    my ( $duration, $min, $max ) = &_setup_parameters;  # needs &
+    my ( $duration, $min, $max ) = _setup_parameters(@_);
     return DateTime::Set->from_recurrence(
         next => sub { 
             my $tmp = $_[0]->clone;
