@@ -222,7 +222,7 @@ sub _get_next {
                         last; # return $next;
                     }
                 }
-                elsif (( $next + @$max[ $j + 1 ] ) > $self )
+                elsif (( $next + $max->[ $j + 1 ] ) > $self )
                 {
                     # print " #$j $i next ". $next->datetime ." \n";
                     last; # return $next;
