@@ -189,12 +189,11 @@ sub _add {
         12 * $_[0]->year + $_[0]->month - 1
     },
     days => sub { 
-        $_[0]->{local_rd_days} 
+        ( $_[0]->utc_rd_values() )[0]
     },
     weeks => sub {
         # $_[1] is the "week start day", such as "1mo"
         use integer;
-        # warn " $_[1] ";
         return ( $as_number{days}->( $_[0] ) - $weekdays_any{ $_[1] } ) / 7;
     },
     hours => sub { 
@@ -204,14 +203,11 @@ sub _add {
         $as_number{hours}->($_[0]) * 60 + $_[0]->minute 
     },
     seconds => sub { 
-        $as_number{minutes}->($_[0]) * 60 + $_[0]->second 
-        # TODO: missing support for leapseconds
-        # my $seconds = 86400 * _day($tmp) + $tmp->{local_rd_secs};
+        $_[0]->local_rd_as_seconds
     },
     years_weekly => sub {
         # get the internal year number, in 'week' mode
         # $_[1] is the "week start day", such as "1mo"
-        # the datetime must be near the beginning of the year!
         my $base = $_[0]->clone;
         $base = $truncate{years_weekly}->( $base, $_[1] )
             if $base->month > 11 || $base->month < 2;
@@ -221,7 +217,6 @@ sub _add {
     months_weekly => sub {
         # get the internal month number, in 'week' mode
         # $_[1] is the "week start day", such as "1mo"
-        # the datetime must be near the beginning of the month!
         my $base = $_[0]->clone;
         $base = $truncate{months_weekly}->( $base, $_[1] )
             if $base->day > 20 || $base->day < 7;
@@ -563,7 +558,6 @@ sub _create_recurrence {
         if ( $base eq $units[$_] )
         {
             @valid_units = @units[ $_+1 .. $#units ];
-            # warn "$base - @valid_units";
             last;
         }
     }
@@ -672,13 +666,7 @@ sub _create_recurrence {
                         $_ += 7 while $_ < 0;
                     }
 
-                    # redo argument sort
-                    # sort positive values first
                     @{$args{$unit}} = sort @{$args{$unit}};
-                    
-                    #    sort {
-                    #           ( $a < 0 ) <=> ( $b < 0 ) || $a <=> $b 
-                    #         } @{$args{$unit}};
             }
 
             return DateTime::Set::ICal->empty_set 
@@ -789,10 +777,10 @@ sub _get_occurrence_by_index {
             if  $occurrence < 0;
         my $next = $base->clone;
         my $previous = $base;
-        # decode the occurrence-number into a parameter-index-list
         my @values = ( -1 );
         for my $j ( 1 .. $#{$args->{duration}} ) 
         {
+            # decode the occurrence-number into a parameter-index
             my $i = int( $occurrence / $args->{total_level}[$j] );
             $occurrence -= $i * $args->{total_level}[$j];
             push @values, $i;
@@ -834,11 +822,9 @@ sub _get_previous {
     return $self if $self->is_infinite;
 
     my $base = $args->{truncate_interval}->( $self, $args );
-
     my ( $next, $i, $start, $end );
     my $init = 0;
     my $retry = 30;
-    my $err;
 
     INTERVAL: while(1) {
             $args->{previous_unit_interval}->( $base, $args ) if $init;
@@ -847,11 +833,7 @@ sub _get_previous {
             # binary search
             $start = 0;
             $end = $args->{total_durations} - 1;
-
-            while (1) {
-                return undef 
-                    unless $retry--;
-                
+            while ( $retry-- ) {
                 if ( $end - $start < 3 )
                 {
                     for ( $i = $end; $i >= $start; $i-- ) 
@@ -876,9 +858,9 @@ sub _get_previous {
                     $end = $i - 1;
                 }
             }
+            return undef; 
     }
 }
-
 
 
 sub _get_next {
@@ -887,11 +869,9 @@ sub _get_next {
     return $self if $self->is_infinite;
 
     my $base = $args->{truncate_interval}->( $self, $args );
-
     my ( $next, $i, $start, $end );
     my $init = 0;
     my $retry = 30;
-    my $err;
     
     INTERVAL: while(1) {
             $args->{next_unit_interval}->( $base, $args ) if $init;
@@ -900,11 +880,7 @@ sub _get_next {
             # binary search
             $start = 0;
             $end = $args->{total_durations} - 1;
-                 
-            while (1) {
-                return undef 
-                    unless $retry--;
-                    
+            while ( $retry-- ) {
                 if ( $end - $start < 3 )
                 {
                     for $i ( $start .. $end ) 
@@ -929,6 +905,7 @@ sub _get_next {
                     $start = $i + 1;
                 }
             }
+            return undef; 
     }
 }
 
@@ -1094,13 +1071,13 @@ The "interval" parameter represents how often the recurrence rule repeats.
 
 The optional "start" parameter specifies where to start counting:
 
-    my $dt = DateTime->new( year => 2003, month => 6, day => 15 );
+    my $dt_start = DateTime->new( year => 2003, month => 6, day => 15 );
 
     my $set = DateTime::Event::Recurrence->daily
                   ( interval => 11,
                     hours    => 10,
                     minutes  => 30,
-                    start    => $dt,
+                    start    => $dt_start,
                   );
 
 This specifies a recurrence that happens at 10:30 on the day specified
@@ -1117,8 +1094,7 @@ In this case, the method is used to specify the unit, so C<daily()>
 means that our unit is a day, and C<< interval => 11 >> specifies the
 quantity of our unit.
 
-Even if your "start" parameter has a time zone, the returned set will
-still be in the floating time zone.
+The "start" parameter should have no time zone.
 
 =head2 The "week_start_day" Parameter
 
