@@ -1105,14 +1105,14 @@ You can also provide multiple sets of duration arguments, such as
 this:
 
     my $set = daily DateTime::Event::Recurrence (
-        hours => [ -1, 10, 14 ],
-        minutes => [ -15, 30, 15 ] );
+        hours =>   [ 10, 14,  -1 ],
+        minutes => [ 30, 15, -15 ], );
 
 specifies a recurrence occuring everyday at these 9 different times:
 
-  09:45,  10:15,  10:30,    # 10h ( -15 / +15 / +30 minutes )
-  13:45,  14:15,  14:30,    # 14h ( -15 / +15 / +30 minutes )
-  22:45,  23:15,  23:30,    # -1h ( -15 / +15 / +30 minutes )
+  10:15,  10:30,  10:45,   # +10h ( +15min / +30min / last 15min )
+  14:15,  14:30,  14:45,   # +14h ( +15min / +30min / last 15min )
+  23:15,  23:30,  23:45,   # last 1h ( +15min / +30min / last 15min )
 
 To create a set of recurrences every thirty seconds, we could do this:
 
