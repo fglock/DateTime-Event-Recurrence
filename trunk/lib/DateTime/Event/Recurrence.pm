@@ -512,7 +512,9 @@ __COMMENT
         $start = $args{start} if exists $args{start};
         $start = $args{after} if exists $args{after} && ! defined $start;
         $start = $args{span}->start if exists $args{span} && ! defined $start;
-        undef $start if $start == INFINITY || $start == NEG_INFINITY;
+        if ( defined $start ) {
+            undef $start if $start == INFINITY || $start == NEG_INFINITY;
+        }
 
         if ( $start )
         {
