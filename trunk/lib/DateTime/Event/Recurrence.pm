@@ -926,20 +926,6 @@ sub _get_previous {
             $end = $args->{total_durations} - 1;
 
             while (1) {
-                $tmp = int( $start + ( $end - $start ) / 2 );
-                ( $next, $err ) = _get_occurence_by_index ( $base, $tmp, $args );
-                unless (defined $next) {
-                    if ( $err >= 0 ) { $end = $err; next }
-                    next INTERVAL;
-                }
-
-                if ( $next < $self ) {
-                    $start = $tmp;
-                }
-                else {
-                    $end = $tmp - 1;
-                }
-
                 if ( $end - $start < 3 )
                 {
                     for ( $j = $end; $j >= $start; $j-- ) {
@@ -953,7 +939,20 @@ sub _get_previous {
                     }
                     next INTERVAL;
                 }
+
                 $tmp = int( $start + ( $end - $start ) / 2 );
+                ( $next, $err ) = _get_occurence_by_index ( $base, $tmp, $args );
+                unless (defined $next) {
+                    if ( $err >= 0 ) { $end = $err; next }
+                    next INTERVAL;
+                }
+
+                if ( $next < $self ) {
+                    $start = $tmp;
+                }
+                else {
+                    $end = $tmp - 1;
+                }
             }
         }
     }
@@ -987,6 +986,16 @@ sub _get_next {
             $end = $args->{total_durations} - 1;
                  
             while (1) {
+                if ( $end - $start < 3 )
+                {
+                    for $j ( $start .. $end ) {
+                        ( $next ) = _get_occurence_by_index ( $base, $j, $args ) ;
+                        next INTERVAL unless defined $next;
+                        return $next if $next > $self;
+                    }
+                    next INTERVAL;
+                }
+
                 $tmp = int( $start + ( $end - $start ) / 2 );
                 ( $next ) = _get_occurence_by_index ( $base, $tmp, $args ) ;
                 next INTERVAL unless defined $next;
@@ -996,16 +1005,6 @@ sub _get_next {
                 }
                 else {
                     $start = $tmp + 1;
-                }
-
-                if ( $end - $start < 3 ) 
-                {
-                    for $j ( $start .. $end ) {
-                        ( $next ) = _get_occurence_by_index ( $base, $j, $args ) ;
-                        next INTERVAL unless defined $next;
-                        return $next if $next > $self;
-                    }
-                    next INTERVAL;
                 }
             }
         }
