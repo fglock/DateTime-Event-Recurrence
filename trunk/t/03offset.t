@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 27;
+use Test::More tests => 38;
 
 use DateTime;
 use DateTime::Event::Recurrence;
@@ -81,11 +81,11 @@ use DateTime::Event::Recurrence;
                            time_zone => 'UTC' );
 
     my $daily = daily DateTime::Event::Recurrence ( 
-        duration => [
+        duration => [ [
             new DateTime::Duration( hours => -1 ),
             new DateTime::Duration( hours => 10 ),
             new DateTime::Duration( hours => 14 ),
-         ] );
+         ] ] );
 
     my $dt;
 
@@ -114,5 +114,53 @@ use DateTime::Event::Recurrence;
     $dt = $dt->subtract( hours => 3 );  # 2003-04-28T11:00:00
     $dt = $daily->closest( $dt );
     is ( $dt->datetime, '2003-04-28T10:00:00', 'closest' );
+}
+
+# DAILY, many many occurrences
+{
+    my $dt1 = new DateTime( year => 2003, month => 4, day => 28,
+                           hour => 12, minute => 10, second => 45,
+                           nanosecond => 123456,
+                           time_zone => 'UTC' );
+
+    my $daily = daily DateTime::Event::Recurrence ( 
+        duration => [ [
+            new DateTime::Duration( hours => -1 ),  # 23h
+            new DateTime::Duration( hours => 10 ),
+            new DateTime::Duration( hours => 14 ), ],
+         [
+            new DateTime::Duration( minutes => -15 ),  # 45min
+            new DateTime::Duration( minutes => 15 ),
+            new DateTime::Duration( minutes => 30 ),
+         ],
+      ] );
+
+    my $dt;
+
+    $dt = $daily->next( $dt1 );
+    is ( $dt->datetime, '2003-04-28T13:45:00', 'next' );
+    $dt = $daily->next( $dt );
+    is ( $dt->datetime, '2003-04-28T14:15:00', 'next' );
+    $dt = $daily->next( $dt );
+    is ( $dt->datetime, '2003-04-28T14:30:00', 'next' );
+    $dt = $daily->next( $dt );
+    is ( $dt->datetime, '2003-04-28T22:45:00', 'next' );
+
+    is ( $dt1->datetime, '2003-04-28T12:10:45', 'immutable' );
+
+    $dt = $daily->previous( $dt1 );
+    is ( $dt->datetime, '2003-04-28T10:30:00', 'previous '.$dt->datetime );
+    $dt = $daily->previous( $dt );
+    is ( $dt->datetime, '2003-04-28T10:15:00', 'previous' );
+    $dt = $daily->previous( $dt );
+    is ( $dt->datetime, '2003-04-28T09:45:00', 'previous' );
+
+    is ( $dt1->datetime, '2003-04-28T12:10:45', 'immutable' );
+
+    $dt = $daily->closest( $dt1 );
+    is ( $dt->datetime, '2003-04-28T13:45:00', 'closest' );
+    $dt = $dt->subtract( hours => 3 );  # 2003-04-28T11:00:00
+    $dt = $daily->closest( $dt );
+    is ( $dt->datetime, '2003-04-28T10:30:00', 'closest' );
 }
 

@@ -9,7 +9,10 @@ use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.00_06';
+$VERSION = '0.00_08';
+
+# debug!
+use Data::Dumper;
 
 # -------- CONSTRUCTORS
 
@@ -28,17 +31,17 @@ BEGIN {
         my $sub = "
             sub ".__PACKAGE__."::$namely {
                 my \$class = shift;
-                my \$duration = \&_setup_parameters;  # needs \&
+                my ( \$duration, \$min, \$max ) = \&_setup_parameters;  # needs \&
                 bless {
                    next => sub { 
                        my \$tmp = \$_[0]->clone;
                        \$tmp->truncate( to => '$name' );
-                       _get_next( \$_[0], \$tmp, '$names', \$duration );
+                       _get_next( \$_[0], \$tmp, '$names', \$duration, \$min, \$max );
                    },
                    previous => sub {
                        my \$tmp = \$_[0]->clone;
                        \$tmp->truncate( to => '$name' );
-                       _get_previous( \$_[0], \$tmp, '$names', \$duration );
+                       _get_previous( \$_[0], \$tmp, '$names', \$duration, \$min, \$max );
                    }
                 }, \$class;
             } ";
@@ -51,50 +54,115 @@ BEGIN {
 
 sub weekly {
     my $class = shift;
-    my $duration = &_setup_parameters;  # needs &
+    my ( $duration, $min, $max ) = &_setup_parameters;  # needs &
     bless {
         next => sub { 
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
                 ->subtract( days => $_[0]->day_of_week_0 );
-            _get_next( $_[0], $tmp, 'weeks', $duration );
+            _get_next( $_[0], $tmp, 'weeks', $duration, $min, $max );
         },
         previous => sub {
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
                  ->subtract( days => $_[0]->day_of_week_0 );
-            _get_previous( $_[0], $tmp, 'weeks', $duration );
+            _get_previous( $_[0], $tmp, 'weeks', $duration, $min, $max );
         }
     }, $class;
 }
 
+
+# method( duration => $dur )
+# method( duration => [ [ $dur, $dur, $dur ] ] )
+# method( hours => 10 )
+# method( hours => 10, minutes => 30 )
+# method( duration => [ [ $dur, $dur ], 
+#                       [ $dur, $dur ] ] )
 
 sub _setup_parameters {
     my %args = @_;
     my $duration;  
     if ( exists $args{ duration } ) {
         $duration = delete $args{ duration };
-        $duration = [ $duration ] if ref( $duration ) ne 'ARRAY';
-        # make durations immutable
-        $_ = $_->clone for @$duration;  
+        $duration = [ [ $duration ] ] if ref( $duration ) ne 'ARRAY';
     }
-    $duration = [ new DateTime::Duration( %args ) ] if keys %args; 
-    return $duration;
+    $duration = [ [ new DateTime::Duration( %args ) ] ] if keys %args; 
+
+    my @min;
+    my @max;
+    if ( $duration ) {
+        # pre-process each duration line; get min and max
+        # such that we can look up the duration table in linear time
+        # (it can be done in log time - maybe later...)
+        my $i;
+        for ( $i = $#$duration; $i >= 0; $i-- ) {
+
+            # make durations immutable
+            $_ = $_->clone for @{@{$duration}[$i]};  
+  
+            $min[$i] = ${$duration}[$i][0];
+            $max[$i] = ${$duration}[$i][-1];
+            if ( $i < $#$duration ) {
+                $min[$i] += $min[$i + 1];
+                $max[$i] += $max[$i + 1];
+            }
+            # print " i= $i n= $#$duration ". Dumper( @{$duration}[$i] )."\n";
+            # print " ".  Dumper( $min[$i] ) ." .. ". Dumper( $max[$i] )."\n";
+        }
+    }
+
+    return ( $duration, \@min, \@max );
 }
 
 sub _get_previous {
-    my ( $self, $base, $unit, $duration ) = @_;
+    my ( $self, $base, $unit, $duration, $min, $max ) = @_;
     if ( $duration ) 
     {
         $base->subtract( $unit => 1 )
-            while ( $base + @$duration[0] ) >= $self;
+            while ( $base + @$min[0] ) >= $self;
+
+        my $j = 0;
+        my $next;
         my $i;
-        for ( $i = $#$duration; $i >= 0; $i-- ) {
-            my $next = $base->clone;
-            $next->add_duration( @$duration[$i] );
-            return $next if $next < $self;
+        while(1) {
+
+            for ( $i = $#{@$duration[$j]}; $i >= 0; $i-- ) {
+                # my $next = $base->clone;
+                # $next->add_duration( ${$duration}[$j][$i] );
+                # return $next if $next < $self;
+
+
+                $next = $base + ${$duration}[$j][$i];
+                # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
+                if ( $j == $#{$duration} ) 
+                {
+                    if ( $next < $self ) 
+                    {
+                        # print " #$j $i next ". $next->datetime ." \n";
+                        last; # return $next;
+                    }
+                }
+                elsif (( $next + @$min[ $j + 1 ] ) < $self )
+                {
+                    # print " #$j $i next ". $next->datetime ." \n";
+                    last; # return $next;
+                }
+
+
+
+
+            }
+
+            $base = $next;
+
+            # print " opt0: ".$base->datetime."  \n";
+            if ( $j >= $#{$duration} ) {
+                # print "#0\n";
+                return $base; 
+            }
+            $j++;
         }
-        die "invalid previous";
+
     }
     else 
     {
@@ -103,18 +171,49 @@ sub _get_previous {
     return $base;
 }
 
+
+
 sub _get_next {
-    my ( $self, $base, $unit, $duration ) = @_;
+    my ( $self, $base, $unit, $duration, $min, $max ) = @_;
     if ( $duration ) 
     {
         $base->add( $unit => 1 )
-            while ( $base + @$duration[-1] ) <= $self;
-        for my $i ( 0 .. $#$duration ) {
-            my $next = $base->clone;
-            $next->add_duration( @$duration[$i] );
-            return $next if $next > $self;
+            while ( $base + @$max[0] ) <= $self;
+
+        # print " self ".$self->datetime." n $#{$duration} \n";
+
+        my $j = 0;
+        my $next;
+        my $i;
+        while(1) {
+
+            for $i ( 0 .. $#{@$duration[$j]} ) {
+                $next = $base + ${$duration}[$j][$i];
+                # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
+                if ( $j == $#{$duration} ) 
+                {
+                    if ( $next > $self ) 
+                    {
+                        # print " #$j $i next ". $next->datetime ." \n";
+                        last; # return $next;
+                    }
+                }
+                elsif (( $next + @$max[ $j + 1 ] ) > $self )
+                {
+                    # print " #$j $i next ". $next->datetime ." \n";
+                    last; # return $next;
+                }
+            }
+
+            $base = $next;
+
+            # print " opt0: ".$base->datetime."  \n";
+            if ( $j >= $#{$duration} ) {
+                # print "#0\n";
+                return $base; 
+            }
+            $j++;
         }
-        die "invalid next";
     }
     else 
     {
@@ -254,6 +353,35 @@ This is useful for creating recurrences such as I<last day of month>:
 The constructors do not check for duration overflow, such as 
 a duration bigger than the period. The behaviour in this case is 
 undefined and it might change between versions.
+
+The constructors also accept "multi-level" durations, such as
+the ones used by C<crontab> and in C<RFC2445>. 
+
+Multi-level durations are specified as an Array-of-Arrays.
+
+  # specify a daily recurrence with hours and minutes
+  my $daily = daily DateTime::Event::Recurrence ( 
+     duration => [ 
+         [  # first level: hours
+            new DateTime::Duration( hours => -1 ),  # 23h
+            new DateTime::Duration( hours => 10 ),
+            new DateTime::Duration( hours => 14 ), 
+         ],
+         [  # second level: minutes
+            new DateTime::Duration( minutes => -15 ),  # 45min
+            new DateTime::Duration( minutes => 15 ),
+            new DateTime::Duration( minutes => 30 ),
+         ], 
+     ] 
+  );
+
+specifies a recurrence occuring everyday at these 9 different times:
+
+  09:45,  10:15,  10:30,    # 10h ( -15 / +15 / +30 minutes )
+  13:45,  14:15,  14:30,    # 14h ( -15 / +15 / +30 minutes )
+  22:45,  23:15,  23:30,    # -1h ( -15 / +15 / +30 minutes )
+
+The durations in a multi-level specification I<must> be ordered.
 
 =item * as_set
 

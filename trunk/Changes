@@ -1,3 +1,13 @@
+0.00_08
+
+- both previous and next work; all tests pass; more docs
+
+0.00_07
+
+- works with 2-D durations; looks up table in linear time (in worst case).
+  That is, a 4x4 table gives 4^4 combinations but is looked up in 4*4 time.
+  But it could be done in 4log4 time...
+
 0.00_06
 
 - works with multiple durations like
