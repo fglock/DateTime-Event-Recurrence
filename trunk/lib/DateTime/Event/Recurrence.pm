@@ -207,7 +207,7 @@ sub _get_next {
     if ( $duration ) 
     {
         $base->add( $unit => 1 )
-            while ( $base + @$max[0] ) <= $self;
+            while ( $base + $max->[0] ) <= $self;
 
         # print " self ".$self->datetime." n $#{$duration} \n";
 
