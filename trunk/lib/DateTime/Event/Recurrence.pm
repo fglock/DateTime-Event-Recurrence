@@ -189,7 +189,7 @@ sub _add {
         12 * $_[0]->year + $_[0]->month - 1
     },
     days => sub { 
-        ( $_[0]->utc_rd_values() )[0]
+        ( $_[0]->local_rd_values() )[0]
     },
     weeks => sub {
         # $_[1] is the "week start day", such as "1mo"
