@@ -6,6 +6,9 @@ use DateTime;
 use DateTime::SpanSet;
 use DateTime::Event::Recurrence;
 
+sub str { ref($_[0]) ? $_[0]->datetime : $_[0] }
+sub span_str { str($_[0]->min) . '..' . str($_[0]->max) }
+
 {
     # INTERSECTION
 
@@ -62,8 +65,37 @@ use DateTime::Event::Recurrence;
 }
 
 __END__
+{
+    # BUILD SPAN-SET
 
-TODO: 
+    my $dt1 = new DateTime( year => 2003, month => 4, day => 28,
+                           hour => 12, minute => 10, second => 45,
+                           nanosecond => 123456,
+                           time_zone => 'UTC' );
+
+    my $r1 = yearly DateTime::Event::Recurrence (
+        months =>  [ 10, 14 ],
+        days =>    [ 15 ],
+        hours =>   [ 14 ] );
+
+    my $r = DateTime::SpanSet->from_set_and_duration(
+          set => $r1,
+          hours => 1,
+       );
+
+    my $span;
+    my $s;
+
+    my $iterator = 
+        $r->intersection( DateTime::Span->new( after => $dt1 ) )
+          ->iterator;
+
+    $span = $iterator->next;
+    $s = span_str( $span );  
+    is ( $s, undef, 'next span-set' );
+
+}
+
 {
     # INTERSECTION TO SPAN-SET
 
@@ -90,6 +122,6 @@ TODO:
     my $r = $r2->intersection( $rs1 );
 
     $dt = $r->next( $dt1 );
-    is ( $dt, undef, 'next no-intersection' );
+    is ( $dt, undef, 'next intersection to span-set' );
 }
 
