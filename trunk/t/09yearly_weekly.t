@@ -44,8 +44,6 @@ use DateTime::Event::Recurrence;
         '2003-12-22T00:00:00 2004-12-27T00:00:00 2005-12-26T00:00:00',
         "yearly-weekly days -7" );
 
-TODO: {
-    local $TODO = "negative weeks doesn't work";
 
     $yearly = yearly DateTime::Event::Recurrence(
                          year_type => 'weekly',
@@ -53,21 +51,19 @@ TODO: {
     @dt = $yearly->as_list( start => $dt1, end => $dt2 );
     $r = join(' ', map { $_->datetime } @dt);
     is( $r,
-        'x',
+        '2003-12-22T00:00:00 2004-12-27T00:00:00 2005-12-26T00:00:00',
         "yearly-weekly week -1" );
-}
 
-TODO: {
-    local $TODO = "mixing negative and positive weeks doesn't work";
     $yearly = yearly DateTime::Event::Recurrence(
                          year_type => 'weekly',
                          weeks => [ -1, 2 ] );
     @dt = $yearly->as_list( start => $dt1, end => $dt2 );
     $r = join(' ', map { $_->datetime } @dt);
     is( $r,
-        'x',
+        '2003-12-22T00:00:00 2004-01-05T00:00:00 '.
+        '2004-12-27T00:00:00 2005-01-10T00:00:00 '.
+        '2005-12-26T00:00:00 2006-01-09T00:00:00',
         "yearly-weekly week -1, 2" );
-}
 
 }
 
