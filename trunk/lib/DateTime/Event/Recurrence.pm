@@ -9,7 +9,7 @@ use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.02_07';
+$VERSION = '0.03';
 
 # debug!
 use Data::Dumper;
@@ -375,6 +375,7 @@ sub monthly {
 
     if ( exists $args{weeks} )
     {
+        # warn "** months_weekly $week_start_day interval ".$_args->{interval};
         $_args->{week_start_day} = $week_start_day;
 
         $_args->{unit} = 'months_weekly';
@@ -502,6 +503,9 @@ __COMMENT
         my $last_unit = $base;
         $last_unit = 'years_weekly' 
              if $last_unit eq 'years' &&
+                exists $args{weeks} ;
+        $last_unit = 'months_weekly'
+             if $last_unit eq 'months' &&
                 exists $args{weeks} ;
 
         # get 'start' parameter
