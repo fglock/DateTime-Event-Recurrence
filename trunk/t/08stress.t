@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 3;
+use Test::More tests => 8;
 
 use DateTime;
 use DateTime::SpanSet;
@@ -33,15 +33,15 @@ sub span_str { str($_[0]->min) . '..' . str($_[0]->max) }
     $dt = $r1->next( $dt );
     is ( $dt->datetime, '2003-04-28T12:10:47', 'next' );
 
+    $dt = $r2->next( $dt1 );
+    is ( $dt->datetime, '2003-04-28T12:15:00', 'next' );
+    $dt = $r2->next( $dt );
+    is ( $dt->datetime, '2003-04-28T12:30:00', 'next' );
+
     my $r = $r1->intersection( $r2 );
 
     $dt = $r->next( $dt1 );
     is ( $dt->datetime, '2003-04-28T12:15:00', 'next intersection' );
-}
-
-__END__
-
-# TODO: fatal error!
     $dt = $r->next( $dt );
     is ( $dt->datetime, '2003-04-28T12:30:00', 'next intersection' );
     $dt = $r->next( $dt );
@@ -51,14 +51,15 @@ __END__
 {
     # NO-INTERSECTION
 
+    # TODO!
     my $dt1 = new DateTime( year => 2003, month => 4, day => 28,
                            hour => 12, minute => 10, second => 45,
                            nanosecond => 123456,
                            time_zone => 'UTC' );
 
     my $r1 = yearly DateTime::Event::Recurrence (
-        months =>  [ 10, 14 ],
-        days =>    [ 15 ],
+        months =>  [ 1 .. 12 ],
+        days =>    [ 1 .. 31 ],
         hours =>   [ 14 ],
         minutes => [ 15 ] );
 
