@@ -102,7 +102,7 @@ use DateTime::Set;
 use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
-$VERSION = 0.0901;
+$VERSION = '0.10';
 
 use constant INFINITY     =>       100 ** 100 ** 100 ;
 use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
