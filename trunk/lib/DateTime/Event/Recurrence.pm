@@ -122,7 +122,7 @@ sub _setup_parameters {
         for ( $i = $#$duration; $i >= 0; $i-- ) {
 
             # make durations immutable
-            $_ = $_->clone for @{@{$duration}[$i]};  
+            $_ = $_->clone for @{ $duration->[$i] };  
   
             $min[$i] = ${$duration}[$i][0];
             $max[$i] = ${$duration}[$i][-1];
