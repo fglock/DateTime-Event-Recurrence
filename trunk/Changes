@@ -1,3 +1,5 @@
+- removed (undocumented) arguments 'after' and 'start'
+
 0.15_02   2005-01-27
 - allows interleaved neg/positive values; allows repeated indexes.
   Supports weird argument lists such as [ -200, -10, -10, 200, 20 ].

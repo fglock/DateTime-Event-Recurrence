@@ -174,10 +174,8 @@ BEGIN {
 sub _add {
     # datetime, unit, value
     my $dur = \$memoized_duration{$_[1]}{$_[2]};
-    unless ( $$dur ) 
-    {
-        $$dur = new DateTime::Duration( $_[1] => $_[2] );
-    }
+    $$dur = new DateTime::Duration( $_[1] => $_[2] )
+        unless defined $$dur;
     $_[0]->add_duration( $$dur );
 }
 
@@ -539,25 +537,19 @@ sub _create_recurrence {
         unless defined $week_start_day;
     die "$base: invalid week start day ($week_start_day)"
         unless $weekdays_any{ $week_start_day };
-    # warn " wsd  $week_start_day   base $base \n";
                    
-    # --- INTERVAL and OFFSET
+    # --- INTERVAL, START, and OFFSET
             
     my $interval = delete $args{interval} || 1;
     die "invalid 'interval' specification ($interval)"
         if $interval < 1;
-    $ical_string .= ";INTERVAL=$interval" if $interval && $interval > 1;
+    $ical_string .= ";INTERVAL=$interval" 
+        if $interval > 1;
 
     my $start = delete $args{start};
-    $start = $args{after} 
-        if exists $args{after} && ! defined $start;
-    $start = $args{span}->start 
-        if exists $args{span} && ! defined $start;
-    if ( defined $start ) {
-        undef $start 
-            if $start == INFINITY || 
-               $start == NEG_INFINITY;
-    }
+    undef $start 
+        if defined $start && $start->is_infinite;
+        
     my $offset = 0;
     $offset = $as_number{$base_unit}->( $start, $week_start_day ) % $interval
         if $start && $interval > 1;
@@ -648,14 +640,11 @@ sub _create_recurrence {
                 }
             }
             
-            if ( exists $limits{ $unit } ) 
-            {
-                @{$args{$unit}} =
+            @{$args{$unit}} =
                     grep { 
                            $_ < $limits{ $unit } && 
                            $_ >= - $limits{ $unit } 
-                         } @{$args{$unit}}
-            }
+                         } @{$args{$unit}};
             
             if ( $unit eq 'days' &&
                  ( $base_unit eq 'months' || 
@@ -685,10 +674,11 @@ sub _create_recurrence {
 
                     # redo argument sort
                     # sort positive values first
-                    @{$args{$unit}} = 
-                        sort {
-                               ( $a < 0 ) <=> ( $b < 0 ) || $a <=> $b 
-                             } @{$args{$unit}};
+                    @{$args{$unit}} = sort @{$args{$unit}};
+                    
+                    #    sort {
+                    #           ( $a < 0 ) <=> ( $b < 0 ) || $a <=> $b 
+                    #         } @{$args{$unit}};
             }
 
             return DateTime::Set::ICal->empty_set 
@@ -795,10 +785,8 @@ sub _get_occurrence_by_index {
     # TODO: memoize "occurrences" within an "INTERVAL" ???
     RETRY_OVERFLOW: for ( 0 .. 5 )  
     {
-        # returns undef on any errors
         return undef 
-            if  $occurrence >= $args->{total_durations} ||
-                $occurrence < 0;
+            if  $occurrence < 0;
         my $next = $base->clone;
         my $previous = $base;
         # decode the occurrence-number into a parameter-index-list
