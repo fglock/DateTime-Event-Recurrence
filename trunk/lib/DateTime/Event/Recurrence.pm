@@ -117,6 +117,7 @@ use vars qw(
     %memoized_duration
     %ical_name
     %ical_days
+    %limits
 );
 
 BEGIN {
@@ -130,19 +131,19 @@ BEGIN {
         minutes BYMINUTE seconds BYSECOND );
     %ical_days =  qw( 1 MO 2 TU 3 WE 4 TH 5 FR 6 SA 7 SU 
                       -7 MO -6 TU -5 WE -4 TH -3 FR -2 SA -1 SU );
+    %limits = qw (
+        nanoseconds 1000000000
+        seconds     60
+        minutes     60
+        hours       24
+        months      12
+        weeks       53
+    );
 }
+
 
 # memoization reduces 'duration' creation from >10000 to about 30 per run,
 # in DT::E::ICal
-#
-sub _new_duration {
-    # unit, value
-    my $dur = \$memoized_duration{$_[0]}{$_[1]};
-    unless ( $$dur ) {
-        $$dur = new DateTime::Duration( $_[0] => $_[1] );
-    }
-    return $$dur;
-}
 
 sub _add {
     # datetime, unit, value
@@ -275,8 +276,10 @@ sub _add {
 %next_unit = (
     (
         map { 
-              my $dur = _new_duration( $_ => 1 );
-              $_ => sub { $_[0]->add_duration( $dur ) } 
+              my $names = $_;
+              $_ => sub { 
+                           _add( $_[0], $names => 1 ) 
+                        } 
             } qw( years months weeks days hours minutes seconds )
     ),
 
@@ -302,13 +305,6 @@ sub _add {
 );
 
 %previous_unit = (
-    ( 
-        map { 
-              my $dur = _new_duration( $_ => -1 );
-              $_ => sub { $_[0]->add_duration( $dur ) } 
-            } qw( years months weeks days hours minutes seconds )  
-    ),
-
     months_weekly => sub {
         my $base = $_[0]->clone;
         my $return;
@@ -351,9 +347,6 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
                                        $_[1]{interval} 
                                      ) 
                                );
-                           _add( $tmp, $names => - $_[1]{interval} ) 
-                               if $tmp > $_[0];
-                           return $tmp;
                         } 
             } qw( years months days hours minutes seconds )
     ),
@@ -361,9 +354,13 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
     weeks   => sub { 
         my $tmp = $truncate{weeks}->( $_[0], $_[1] );
         while ( $_[1]{offset} != 
-                ( $as_number{weeks}( $tmp, $weekdays_1{ $_[1]{week_start_day} } ) % $_[1]{interval} ) )
+                ( $as_number{weeks}( 
+                    $tmp, $weekdays_1{ $_[1]{week_start_day} } ) % 
+                  $_[1]{interval} 
+                ) 
+              )
         {
-            $previous_unit{weeks}->( $tmp, $_[1] );
+            _add( $tmp, weeks => -1 );
         }
         return $tmp;
     },
@@ -391,9 +388,10 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 
 %next_unit_interval = (
     (
-        map { 
+        map {
+              my $names = $_;
               $_ => sub { 
-                           $_[0]->add_duration( $_[1]->{dur_unit_interval} ) 
+                           _add( $_[0], $names => $_[1]{interval} ) 
                         } 
             } qw( years months weeks days hours minutes seconds )
     ),
@@ -416,8 +414,9 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 %previous_unit_interval = (
     ( 
         map { 
+              my $names = $_;
               $_ => sub { 
-                           $_[0]->add_duration( $_[1]->{neg_dur_unit_interval} ) 
+                           _add( $_[0], $names => - $_[1]{interval} )
                         } 
             } qw( years months weeks days hours minutes seconds )  
     ),
@@ -430,7 +429,7 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
     },
 
     years_weekly => sub {
-        for ( 1 .. $_[1]->{interval} ) 
+        for ( 1 .. $_[1]->{interval} )
         {
             $previous_unit{years_weekly}->( $_[0], $_[1] );
         }
@@ -488,7 +487,6 @@ BEGIN {
 
 sub _setup_parameters {
     my @check_day_overflow;
-    my @level_unit;
     my @total_level;
     my $span;
     my $offset;
@@ -504,6 +502,10 @@ sub _setup_parameters {
     my $interval = delete $args{interval} || 1;
 
     my $week_start_day = delete $args{week_start_day};
+    if ( $week_start_day && $week_start_day ne 'mo' )
+    {
+            $ical_string .= ";WKST=". uc($week_start_day); 
+    }
     $week_start_day = ( $base eq 'years' ) ? 'mo' : '1mo'
             unless defined $week_start_day;
     $week_start_day = '1' . $week_start_day 
@@ -512,14 +514,13 @@ sub _setup_parameters {
             unless $weekdays{ $week_start_day } ||
                    $weekdays_1{ $week_start_day };
                                    
-    my $last_unit = $base;
-    $last_unit = 'years_weekly' 
-             if $last_unit eq 'years' &&
+    my $base_unit = $base;
+    $base_unit = 'years_weekly' 
+             if $base_unit eq 'years' &&
                 exists $args{weeks} ;
-    $last_unit = 'months_weekly'
-             if $last_unit eq 'months' &&
+    $base_unit = 'months_weekly'
+             if $base_unit eq 'months' &&
                 exists $args{weeks} ;
-    my $base_unit = $last_unit;
 
     my $start = $args{start} if exists $args{start};
     $start = $args{after} if exists $args{after} && ! defined $start;
@@ -529,20 +530,14 @@ sub _setup_parameters {
     }
 
     $ical_string .= ";INTERVAL=$interval" if $interval && $interval > 1;
-    if ( $week_start_day && $week_start_day ne 'mo' )
-    {
-            $ical_string .= ";WKST=". uc($week_start_day) 
-                if exists $weekdays{$week_start_day};
-    }
 
-    my $level = 0;
-    # TODO: @duration instead of $duration ???
-    my $duration;  
+    my $level = 1;
+    my @duration =   ( [] );  
+    my @level_unit = ( $base_unit );
     for my $unit (
                  qw( months weeks days hours minutes seconds nanoseconds ) 
             ) 
     {
-
             next unless exists $args{$unit};
 
             if ( ref( $args{$unit} ) eq 'ARRAY' )
@@ -568,34 +563,51 @@ sub _setup_parameters {
             @{$args{$unit}} = sort {
                     ( $a < 0 ) <=> ( $b < 0 ) || $a <=> $b
                 } @{$args{$unit}};
-            
-            $ical_string .= uc( ';' . $ical_name{$unit} . '=' . 
-                                join(",", @{$args{$unit}} ) ) 
-                unless $unit eq 'nanoseconds';
 
-            $duration->[ $level ] = [];
+
+            # make the "ical" string
+            if ( $unit eq 'nanoseconds' )
+            {
+                # there are no nanoseconds in ICal
+            }
+            elsif ( $base eq 'weeks' &&
+                    $unit eq 'days' )
+            {
+                # weekdays have names
+                $ical_string .= uc( ';' . 'BYDAY' . '=' . 
+                    join(",", 
+                      map { exists( $ical_days{ $_ } ) ? $ical_days{ $_ } : $_ } 
+                      @{$args{$unit}} ) 
+                  ) 
+            }
+            else
+            {
+                $ical_string .= uc( ';' . $ical_name{$unit} . '=' . 
+                                join(",", @{$args{$unit}} ) ) 
+            }
+           
 
             # TODO: add overflow checks for other units
-            # TODO: use a hash instead of if-else
 
-            if ( $unit eq 'seconds' ) {
-                    @{$args{$unit}} =
-                        grep { $_ < 60 && $_ > -60 } @{$args{$unit}};
-            }
-            elsif ( $unit eq 'minutes' ) {
-                    @{$args{$unit}} =
-                        grep { $_ < 60 && $_ > -60 } @{$args{$unit}};
-            }
-            elsif ( $unit eq 'hours' ) {
-                    @{$args{$unit}} =
-                        grep { $_ < 24 && $_ > -24 } @{$args{$unit}};
-            }
-            elsif ( $unit eq 'days' ) {
-                # days start in '1'
+            if ( $unit eq 'months' ||
+                 $unit eq 'weeks' ||
+                 $unit eq 'days' ) 
+            {
+                # these units start in '1'
                 for ( @{$args{$unit}} ) {
-                    warn 'days cannot be zero' unless $_;
+                    warn $unit . ' cannot be zero' unless $_;
                     $_-- if $_ > 0;
                 }
+            }
+            
+            if ( exists $limits{ $unit } ) {
+                @{$args{$unit}} =
+                    grep { $_ < $limits{ $unit } && 
+                           $_ > - $limits{ $unit } } 
+                    @{$args{$unit}}
+            }
+            
+            if ( $unit eq 'days' ) {
                 if ( $base_unit eq 'months' || exists $args{month} ) 
                 {   # month day
                     @{$args{$unit}} = 
@@ -638,56 +650,17 @@ sub _setup_parameters {
                         grep { $_ < 366 && $_ > -366 } @{$args{$unit}};
                 }
             }
-            elsif ( $unit eq 'months' ) {
-                # months start in '1'
-                for ( @{$args{$unit}} ) {
-                    warn 'months cannot be zero' unless $_;
-                    $_-- if $_ > 0;
-                }
-                @{$args{$unit}} =
-                    grep { $_ < 12 && $_ > -12 } @{$args{$unit}};
-            }
-            elsif ( $unit eq 'weeks' ) {
-                # weeks start in '1'
-                for ( @{$args{$unit}} ) {
-                    warn 'weeks cannot be zero' unless $_;
-                    $_-- if $_ > 0;
-                }
-                @{$args{$unit}} =
-                    grep { $_ < 53 && $_ > -53 } @{$args{$unit}};
-            }
 
             return -1 unless @{$args{$unit}};  # error - no args left
 
-            push @{ $duration->[ $level ] }, 
-                _new_duration( $unit => $_ ) 
-                    for @{$args{$unit}};
-
-            push @level_unit, $last_unit;
-            $last_unit = $unit;
+            push @duration, $args{$unit};
+            push @level_unit, $unit;
 
             delete $args{$unit};
 
             $level++;
     }
 
-    # TODO: move this up
-    if ( $base eq 'weeks' ) 
-    {
-        my ($by) = $ical_string =~ /(BYMONTHDAY=.*?)(;|$)/;
-        if ( defined $by ) 
-        {
-            # warn "ICAL STRING: ".$ical_string, "\n";
-            my ( undef, @days ) = split( /[=,]/, $by );
-            # map numbers to rfc2445 weekdays 
-            my $by2 = join( ',', 
-                map { exists( $ical_days{ $_ } ) ? $ical_days{ $_ } : $_ } 
-                @days );
-            $ical_string =~ s/$by/BYDAY=$by2/;
-            # warn "ICAL STRING: ".$ical_string, "\n";
-        }
-    }
-    
     if ( $start && $interval > 1 )
     {
             # get offset 
@@ -722,72 +695,64 @@ sub _setup_parameters {
        $offset = 0;
     }
 
-    # TODO: use $span for selecting elements (using intersection)
-    $span = delete $args{span};
-    $span = DateTime::Span->new( %args ) if %args;
-
+    # TODO: use $span for selecting elements (using intersection) 
+    # note - this may change the documented behaviour - check the pod first
+    # $span = delete $args{span};
+    # $span = DateTime::Span->new( %args ) if %args;
 
     my $total_durations = 1;
-    if ( $duration ) {
-        my $i;
-
-        for ( $i = $#$duration; $i >= 0; $i-- ) {
-
-            if ( $i == $#$duration ) {
+    for ( my $i = $#duration; $i > 0; $i-- ) 
+    {
+            if ( $i == $#duration ) 
+            {
                 $total_level[$i] = 1;
             }
             else 
             {
-                $total_level[$i] = $total_level[$i + 1] * ( 1 + $#{ $duration->[$i + 1] } );
+                $total_level[$i] = $total_level[$i + 1] * 
+                                   ( 1 + $#{ $duration[$i + 1] } );
             }
-            $total_durations *= 1 + $#{ $duration->[$i] };
-        }
+            $total_durations *= 1 + $#{ $duration[$i] };
     }
-
-    my $dur_unit_interval = _new_duration( $base => $interval );
-    my $neg_dur_unit_interval = _new_duration( $base => -$interval );
 
     return {
             truncate =>               $truncate_interval{ $base_unit },
-            previous_unit =>          $previous_unit{ $base_unit },
-            next_unit =>              $next_unit{ $base_unit },
             previous_unit_interval => $previous_unit_interval{ $base_unit },
             next_unit_interval =>     $next_unit_interval{ $base_unit },
             
-            duration => $duration, 
+            duration =>        \@duration, 
             total_durations => $total_durations,
-            level_unit => \@level_unit,
-            total_level => \@total_level,
+            level_unit =>      \@level_unit,
+            total_level =>     \@total_level,
             check_day_overflow => \@check_day_overflow,
-            interval => $interval,
-            offset => $offset,
-            dur_unit_interval => $dur_unit_interval,
-            neg_dur_unit_interval => $neg_dur_unit_interval,
-            ical_string => $ical_string,
-            week_start_day => $week_start_day,
+            
+            interval =>        $interval,
+            offset =>          $offset,
+            ical_string =>     $ical_string,
+            week_start_day =>  $week_start_day,
     };
 
 }
 
 
-# returns undef on any errors
-sub _get_occurence_by_index {
-    my ( $base, $occurence, $args ) = @_;
-    return ( undef, -1 ) if $occurence >= $args->{total_durations};
-    my $j;
-    my $i;
+sub _get_occurrence_by_index {
+    my ( $base, $occurrence, $args ) = @_;
+    # returns undef on any errors
+    return ( undef, -1 ) if $occurrence >= $args->{total_durations};
     my $next = $base->clone;
-    for $j ( 0 .. $#{$args->{duration}} ) 
+    for my $j ( 1 .. $#{$args->{duration}} ) 
     {
-        $i = int( $occurence / $args->{total_level}[$j] );
-        $occurence -= $i * $args->{total_level}[$j];
+        my $i = int( $occurrence / $args->{total_level}[$j] );
+        $occurrence -= $i * $args->{total_level}[$j];
 
-        if ( $args->{duration}[$j][$i]->is_negative )
+        if ( $args->{duration}[$j][$i] < 0 )
         {
-            $next_unit{ $args->{level_unit}[$j] }->( $next, $args );
+            $next_unit{ $args->{level_unit}[$j - 1] }->( $next, $args );
         }
-        $next->add_duration( $args->{duration}[$j][$i] );
+        _add( $next, $args->{level_unit}[$j], $args->{duration}[$j][$i] );
 
+        # TODO: write a better overflow checker
+        # checking $as_number{}() would work, but it is slow
         if ( $args->{check_day_overflow}[$j][$i] &&
              $next->month != $base->month )
         {
@@ -807,15 +772,11 @@ sub _get_previous {
 
     my $base = $args->{truncate}->( $self, $args );
 
-    if ( $args->{duration} ) 
-    {
-        my $j;
-        my $next;
-        my ( $tmp, $start, $end );
-        my $init = 0;
-        my $err;
+    my ( $next, $tmp, $start, $end );
+    my $init = 0;
+    my $err;
 
-        INTERVAL: while(1) {
+    INTERVAL: while(1) {
             $args->{previous_unit_interval}->( $base, $args ) if $init;
             $init = 1;
 
@@ -826,8 +787,10 @@ sub _get_previous {
             while (1) {
                 if ( $end - $start < 3 )
                 {
-                    for ( $j = $end; $j >= $start; $j-- ) {
-                        ( $next, $err ) = _get_occurence_by_index ( $base, $j, $args );
+                    for ( my $j = $end; $j >= $start; $j-- ) 
+                    {
+                        ( $next, $err ) = 
+                            _get_occurrence_by_index ( $base, $j, $args );
 
                         unless (defined $next) {
                             if ( $err >= 0 ) { $end = $err; next }
@@ -839,7 +802,8 @@ sub _get_previous {
                 }
 
                 $tmp = int( $start + ( $end - $start ) / 2 );
-                ( $next, $err ) = _get_occurence_by_index ( $base, $tmp, $args );
+                ( $next, $err ) = 
+                    _get_occurrence_by_index ( $base, $tmp, $args );
                 unless (defined $next) {
                     if ( $err >= 0 ) { $end = $err; next }
                     next INTERVAL;
@@ -852,14 +816,7 @@ sub _get_previous {
                     $end = $tmp - 1;
                 }
             }
-        }
     }
-
-    while ( $base >= $self ) 
-    {
-        $args->{previous_unit_interval}->( $base, $args );
-    }
-    return $base;
 }
 
 
@@ -871,14 +828,10 @@ sub _get_next {
 
     my $base = $args->{truncate}->( $self, $args );
 
-    if ( $args->{duration} ) 
-    {
-        my $j;
-        my $next;
-        my ( $tmp, $start, $end );
-        my $init = 0;
+    my ( $next, $tmp, $start, $end );
+    my $init = 0;
 
-        INTERVAL: while(1) {
+    INTERVAL: while(1) {
             $args->{next_unit_interval}->( $base, $args ) if $init;
             $init = 1;
 
@@ -889,8 +842,10 @@ sub _get_next {
             while (1) {
                 if ( $end - $start < 3 )
                 {
-                    for $j ( $start .. $end ) {
-                        ( $next ) = _get_occurence_by_index ( $base, $j, $args ) ;
+                    for my $j ( $start .. $end ) 
+                    {
+                        ( $next ) = 
+                            _get_occurrence_by_index ( $base, $j, $args );
                         next INTERVAL unless defined $next;
                         return $next if $next > $self;
                     }
@@ -898,7 +853,8 @@ sub _get_next {
                 }
 
                 $tmp = int( $start + ( $end - $start ) / 2 );
-                ( $next ) = _get_occurence_by_index ( $base, $tmp, $args ) ;
+                ( $next ) = 
+                    _get_occurrence_by_index ( $base, $tmp, $args );
                 next INTERVAL unless defined $next;
 
                 if ( $next > $self ) {
@@ -908,14 +864,7 @@ sub _get_next {
                     $start = $tmp + 1;
                 }
             }
-        }
     }
-
-    while ( $base <= $self )
-    {
-        $args->{next_unit_interval}->( $base, $args );
-    }
-    return $base;
 }
 
 1;
@@ -1024,18 +973,23 @@ this:
                     minutes => [ 15, 30, -15 ],
                   );
 
-This specifies a recurrence occuring every day at these 9 different
+This specifies a recurrence occurring every day at these 9 different
 times:
 
   10:15,  10:30,  10:45,   # +10h         ( +15min / +30min / last 15min (-15) )
   14:15,  14:30,  14:45,   # +14h         ( +15min / +30min / last 15min (-15) )
   23:15,  23:30,  23:45,   # last 1h (-1) ( +15min / +30min / last 15min (-15) )
 
-To create a set of recurrences occuring every thirty seconds, we could do this:
+To create a set of recurrences occurring every thirty seconds, we could do this:
 
     my $every_30_seconds_set =
         DateTime::Event::Recurrence->minutely( seconds => [ 0, 30 ] );
 
+The following is also valid. See the section on the "interval" parameter:
+        
+    my $every_30_seconds_set =
+        DateTime::Event::Recurrence->secondly( interval => 30 );
+        
 =back
 
 =head2 The "interval" and "start" Parameters
