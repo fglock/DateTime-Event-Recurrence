@@ -1,4 +1,6 @@
-
+0.08  2003-10-31
+- bugfix: when "interval==1" it should be processed as if there
+  was no interval.  Found by Danny Rappleyea
 - document "start" parameter.
 - changed some operations in next/previous that were done twice.
 

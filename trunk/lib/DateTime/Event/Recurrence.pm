@@ -101,7 +101,7 @@ use DateTime::Set;
 use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
-$VERSION = 0.07;
+$VERSION = 0.08;
 
 use constant INFINITY     =>       100 ** 100 ** 100 ;
 use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
@@ -825,7 +825,7 @@ sub _setup_parameters {
 
     my $dur_unit_interval;
     my $neg_dur_unit_interval;
-    if ( $interval ) 
+    if ( $interval && ( $interval > 1 ) ) 
     {
         $dur_unit_interval = _new_duration( $unit => $interval );
         $neg_dur_unit_interval = _new_duration( $unit => -$interval );
