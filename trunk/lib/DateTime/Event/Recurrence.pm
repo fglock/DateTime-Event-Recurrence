@@ -263,29 +263,29 @@ DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurr
  my $dt = DateTime->new( year   => 2000,
                          month  => 6,
                          day    => 20,
-                  );
+                       );
 
- my $r_daily = daily DateTime::Event::Recurrence;
+ my $daily_set = daily DateTime::Event::Recurrence;
 
- my $dt_next = $daily->next( $dt );
+ my $dt_next = $daily_set->next( $dt );
 
- my $dt_previous = $daily->previous( $dt );
+ my $dt_previous = $daily_set->previous( $dt );
 
- my $bool = $daily->contains( $dt );
+ my $bool = $daily_set->contains( $dt );
 
- my $set_days = $r_daily->as_set( start =>$dt1, end=>$dt2 );
+ my @days = $daily_set->as_list( start => $dt1, end => $dt2 );
 
- my @days = $r_daily->as_list( start =>$dt1, end=>$dt2 );
+ my $iter = $daily_set->iterator;
 
- my $set = $r_daily->intersection($dt_span);
- my $iter = $set->iterator;
  while ( my $dt = $iter->next ) {
-     print ' ',$dt->datetime;
+     print ' ', $dt->datetime;
  }
 
 =head1 DESCRIPTION
 
-This module will return a DateTime Recurrence-set object for a given recurrence rule.
+This module provides convenience methods that let you easily create
+C<DateTime::Set> objects for common recurrences, such as "monthly" or
+"daily".
 
 =head1 USAGE
 
@@ -293,38 +293,54 @@ This module will return a DateTime Recurrence-set object for a given recurrence 
 
 =item * yearly monthly weekly daily hourly minutely secondly
 
-  my $r_daily = daily DateTime::Event::Recurrence;
+These methods all return a C<DateTime::Set> object representing the
+given recurrence.
 
-Build a DateTime::Event::Recurrence object.
+  my $daily_set = daily DateTime::Event::Recurrence;
 
-The constructors might take "duration" arguments:
+If no parameters are given, then the set members occur at the
+I<beginning> of each recurrence.  For example, by default the
+C<monthly()> method returns a set where each members is the first day
+of the month.
 
-  my $r_daily_at_evening = daily DateTime::Event::Recurrence( duration => $evening );
+Without parameters, the C<weekly()> without arguments returns
+I<mondays>.
 
-  my $r_daily_at_10_30 = daily DateTime::Event::Recurrence( hours => 10, minutes => 30 );
+However, you can pass in parameters to alter where these datetimes
+fall.  The parameters are the same as those given to the
+C<DateTime::Duration> constructor for specifying the length of a
+duration.  For example, to create a set representing a daily
+recurrence at 10:30 each day, we can do:
 
-Note: C<weekly> without arguments returns I<mondays>.
+  my $daily_at_10_30_set =
+      daily DateTime::Event::Recurrence( hours => 10, minutes => 30 );
 
-  my $r_tuesdays = weekly DateTime::Event::Recurrence( days => 1 );
+To represent every I<Tuesday>:
 
-A negative duration has the meaning as specified in RFC2445:
-it counts backwards from the end of the period.
+  my $weekly_on_tuesday_set =
+      weekly DateTime::Event::Recurrence( days => 1 );
 
-This is useful for creating recurrences such as I<last day of month>:
+A negative duration counts backwards from the end of the period.  This
+is the same as is specified in RFC 2445.
 
-  my $r_last_day_of_month = monthly DateTime::Event::Recurrence( days => -1 );
+This is useful for creating recurrences such as the I<last day of
+month>:
 
-The constructors do not check for duration overflow, such as 
-a duration bigger than the period. The behaviour in this case is 
+  my $last_day_of_month_set =
+      monthly DateTime::Event::Recurrence( days => -1 );
+
+The constructors do not check for duration overflow, such as a
+duration bigger than the period.  The behaviour in this case is
 undefined and it might change between versions.
 
-Note that the 'hours' duration is affected by DST changes
-and might return unexpected results.
+Note that the 'hours' duration is affected by DST changes and might
+return unexpected results.  In particular, it would be possible to
+specify a recurrence that creates nonexistent datetimes.
 
-The constructors can also accept "multi-level" durations, such as
-the ones used by C<crontab> and in C<RFC2445>. 
+You can also provide multiple sets of duration arguments, such as
+this:
 
-    my $daily = daily DateTime::Event::Recurrence ( 
+    my $set = daily DateTime::Event::Recurrence (
         hours => [ -1, 10, 14 ],
         minutes => [ -15, 30, 15 ] );
 
@@ -334,54 +350,10 @@ specifies a recurrence occuring everyday at these 9 different times:
   13:45,  14:15,  14:30,    # 14h ( -15 / +15 / +30 minutes )
   22:45,  23:15,  23:30,    # -1h ( -15 / +15 / +30 minutes )
 
-This is a recurrence occuring every 30 seconds:
+To create a set of recurrences every thirty seconds, we could do this:
 
-    my $half_minute = minutely DateTime::Event::Recurrence ( 
-        seconds => [ 0, 30 ] );
-
-Multi-level durations can also be specified as an Array-of-Arrays
-of duration objects:
-
-  # specify a daily recurrence with hours and minutes
-  my $daily = daily DateTime::Event::Recurrence ( 
-     duration => [ 
-         [  # first level: hours
-            new DateTime::Duration( hours => -1 ),  # 23h
-            new DateTime::Duration( hours => 10 ),
-            new DateTime::Duration( hours => 14 ), 
-         ],
-         [  # second level: minutes
-            new DateTime::Duration( minutes => -15 ),  # 45min
-            new DateTime::Duration( minutes => 15 ),
-            new DateTime::Duration( minutes => 30 ),
-         ], 
-     ] 
-  );
-
-
-The durations in an Array-of-Arrays specification I<must> be ordered.
-
-=item * as_list
-
-  my @dt = $r_daily->as_list( $span );
-
-This builds a DateTime array of events that happen inside the span.
-
-=item * previous current next closest
-
-See DateTime::Set.
-
-=item * contains
-
-  my $bool = $r_daily->contains( $dt );
-
-Verify if a DateTime is a recurrence event.
-
-=item * union intersection complement
-
-See DateTime::Set.
-
-=back
+    my $every_30_seconds_set =
+        minutely DateTime::Event::Recurrence ( seconds => [ 0, 30 ] );
 
 =head1 AUTHOR
 
