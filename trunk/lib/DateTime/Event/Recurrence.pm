@@ -9,7 +9,7 @@ use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.00_03';
+$VERSION = '0.00_04';
 
 # -------- CONSTRUCTORS
 
@@ -40,8 +40,14 @@ BEGIN {
 
                        my \$tmp = \$_[0]->clone;
                        \$tmp->truncate( to => '$name' );
-                       \$tmp->add_duration( \$duration ) if \$duration;
-                       \$tmp->add( $names => 1 ) while \$tmp <= \$_[0];
+                       if ( \$duration ) {
+                           \$tmp->add( $names => 1 ) 
+                               while ( \$tmp + \$duration ) <= \$_[0];
+                           \$tmp->add_duration( \$duration );
+                       }
+                       else {
+                           \$tmp->add( $names => 1 ) while \$tmp <= \$_[0];
+                       }
                        return \$tmp;
 
                    },
@@ -49,8 +55,14 @@ BEGIN {
 
                        my \$tmp = \$_[0]->clone;
                        \$tmp->truncate( to => '$name' );
-                       \$tmp->add_duration( \$duration ) if \$duration;
-                       \$tmp->subtract( $names => 1 ) while \$tmp >= \$_[0];
+                       if ( \$duration ) {
+                           \$tmp->subtract( $names => 1 )
+                               while ( \$tmp + \$duration ) >= \$_[0];
+                           \$tmp->add_duration( \$duration );
+                       }
+                       else {
+                           \$tmp->subtract( $names => 1 ) while \$tmp >= \$_[0];
+                       }
                        return \$tmp;
 
                    }
@@ -79,8 +91,14 @@ sub weekly {
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
                 ->subtract( days => $_[0]->day_of_week_0 );
-            $tmp->add_duration( $duration ) if $duration;
-            $tmp->add( days => 7 ) while $tmp <= $_[0];
+            if ( $duration ) {
+                $tmp->add( days => 7 )
+                    while ( $tmp + $duration ) <= $_[0];
+                $tmp->add_duration( $duration );
+            }
+            else {
+                $tmp->add( days => 7 ) while $tmp <= $_[0];
+            }
             return $tmp;
         },
         previous => sub {
@@ -88,15 +106,21 @@ sub weekly {
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
                  ->subtract( days => $_[0]->day_of_week_0 );
-            $tmp->add_duration( $duration ) if $duration;
-            $tmp->subtract( days => 7 ) while $tmp >= $_[0];
+            if ( $duration ) {
+                $tmp->subtract( days => 7 )
+                    while ( $tmp + $duration ) >= $_[0];
+                $tmp->add_duration( $duration );
+            }
+            else {
+                $tmp->subtract( days => 7 ) while $tmp >= $_[0];
+            }
             return $tmp;
         }
     }, $class;
 }
 
 # ------- ACCESSORS
-# these are inheritable by other DateTime::Event::xxx classes
+# these are (or should be) inheritable by other DateTime::Event::xxx classes
 
 sub as_set {
     my $self = shift;
@@ -121,7 +145,15 @@ sub contains {
 
 sub next {
     my $self = shift;
-    $self->{next} ( $_[0]->clone );
+
+    if ( exists $self->{next} )
+    {
+        $self->{next} ( $_[0]->clone );
+    }
+    else {
+        my $span = new DateTime::Span( after => $_[0] );
+        return $self->as_set->intersection( $span )->next;
+    }
 }
 
 sub current {
@@ -194,17 +226,29 @@ This module will return a DateTime Recurrence object for a given recurrence rule
 
 =item * yearly monthly weekly daily hourly minutely secondly
 
- my $r_daily = daily DateTime::Event::Recurrence;
+  my $r_daily = daily DateTime::Event::Recurrence;
 
 Build a DateTime::Event::Recurrence object.
 
 The constructors might take "duration" arguments:
 
- my $r_daily_at_10 = daily DateTime::Event::Recurrence( hours => 10 );
+  my $r_daily_at_10 = daily DateTime::Event::Recurrence( hours => 10 );
 
 Note: C<weekly> without arguments returns I<mondays>.
 
- my $r_tuesdays = weekly DateTime::Event::Recurrence( days => 1 );
+  my $r_tuesdays = weekly DateTime::Event::Recurrence( days => 1 );
+
+A negative duration has the meaning as specified in RFC2445:
+it counts backwards from the end of the period.
+
+This is useful for creating recurrences
+such as I<last day of month>:
+
+  my $r_last_day_of_month = monthly DateTime::Event::Recurrence( days => -1 );
+
+The constructors do not check for duration overflow, such as specifying
+a duration bigger than the period. The behaviour in this case is 
+undefined and might change between versions.
 
 =item * as_set
 
