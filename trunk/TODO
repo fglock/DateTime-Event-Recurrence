@@ -1,5 +1,8 @@
 TODO list for Perl module DateTime::Event::Recurrence
 
+* document argument overflow tests,
+  add more argument overflow tests
+
 * count hours backwards, in order to avoid DST changes
   which usually occur in the first hours of the day
 
