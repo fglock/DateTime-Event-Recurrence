@@ -1,4 +1,4 @@
-
+0.14
 - requires DT::Set 0.17, because 0.16 had a bug that would break
   some tests.
 
