@@ -14,6 +14,9 @@ TODO list for Perl module DateTime::Event::Recurrence
                        days => [ 4, 15, 18 ],
                        hours => [ 10, 20 ] );
 
+    $r = DT::E::R->monthly (
+                       duration => \@durations );
+
 * experimental code
 
 # this is supposed to combine 2 events.
