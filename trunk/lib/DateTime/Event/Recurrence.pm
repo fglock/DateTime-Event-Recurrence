@@ -9,7 +9,7 @@ use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.00_02';
+$VERSION = '0.00_03';
 
 # -------- CONSTRUCTORS
 
@@ -28,10 +28,31 @@ BEGIN {
         my $sub = "
             sub ".__PACKAGE__."::$namely {
                 my \$class = shift;
-                carp \"$namely takes no arguments\" if \@_;
+                my \%args = \@_;
+                my \$duration;   # closure
+                if ( exists \$args{ duration } ) {
+                    \$duration = delete \$args{ duration };
+                    \$duration = \$duration->clone;  # make it immutable
+                }
+                \$duration = new DateTime::Duration( \%args ) if keys \%args;
                 bless {
                    next => sub { 
-                       \$_[0]->truncate( to => '$name' )->add( $names => 1 ) 
+
+                       my \$tmp = \$_[0]->clone;
+                       \$tmp->truncate( to => '$name' );
+                       \$tmp->add_duration( \$duration ) if \$duration;
+                       \$tmp->add( $names => 1 ) while \$tmp <= \$_[0];
+                       return \$tmp;
+
+                   },
+                   previous => sub {
+
+                       my \$tmp = \$_[0]->clone;
+                       \$tmp->truncate( to => '$name' );
+                       \$tmp->add_duration( \$duration ) if \$duration;
+                       \$tmp->subtract( $names => 1 ) while \$tmp >= \$_[0];
+                       return \$tmp;
+
                    }
                 }, \$class;
             } ";
@@ -44,13 +65,32 @@ BEGIN {
 
 sub weekly {
     my $class = shift;
+    my %args = @_;
     # day_of_week_0 = 0-6 (Monday is 0)
-    carp "weekly takes no arguments" if @_;
+    my $duration;   # closure
+    if ( exists $args{ duration } ) {
+        $duration = delete $args{ duration };
+        $duration = $duration->clone;  # make it immutable
+    }
+    $duration = new DateTime::Duration( %args ) if keys %args; 
     bless {
         next => sub { 
-            $_[0]->truncate( to => 'day' )
-                 ->subtract( days => $_[0]->day_of_week_0 )
-                 ->add( days => 7 ) 
+            # warn 'next '.$_[0];
+            my $tmp = $_[0]->clone;
+            $tmp->truncate( to => 'day' )
+                ->subtract( days => $_[0]->day_of_week_0 );
+            $tmp->add_duration( $duration ) if $duration;
+            $tmp->add( days => 7 ) while $tmp <= $_[0];
+            return $tmp;
+        },
+        previous => sub {
+            # warn 'previous '.$_[0];
+            my $tmp = $_[0]->clone;
+            $tmp->truncate( to => 'day' )
+                 ->subtract( days => $_[0]->day_of_week_0 );
+            $tmp->add_duration( $duration ) if $duration;
+            $tmp->subtract( days => 7 ) while $tmp >= $_[0];
+            return $tmp;
         }
     }, $class;
 }
@@ -91,10 +131,16 @@ sub current {
 }
 
 sub previous {
-    # TODO: optimize this!
     my $self = shift;
-    my $span = new DateTime::Span( before => $_[0] );
-    return $self->as_set->intersection( $span )->previous;
+
+    if ( exists $self->{previous} ) 
+    {
+        return $self->{previous} ( $_[0]->clone );
+    }
+    else {
+        my $span = new DateTime::Span( before => $_[0] );
+        return $self->as_set->intersection( $span )->previous;
+    }
 }
 
 sub closest {
@@ -152,7 +198,13 @@ This module will return a DateTime Recurrence object for a given recurrence rule
 
 Build a DateTime::Event::Recurrence object.
 
-C<weekly> returns I<mondays>.
+The constructors might take "duration" arguments:
+
+ my $r_daily_at_10 = daily DateTime::Event::Recurrence( hours => 10 );
+
+Note: C<weekly> without arguments returns I<mondays>.
+
+ my $r_tuesdays = weekly DateTime::Event::Recurrence( days => 1 );
 
 =item * as_set
 
