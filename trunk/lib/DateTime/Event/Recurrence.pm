@@ -103,7 +103,7 @@ sub _setup_parameters {
                 $args{$unit} = [ $args{$unit} ] 
                     unless ref( $args{$unit} ) eq 'ARRAY';
                 @{$duration}[ $level ] = [];
-                push @{@{$duration}[ $level ]}, 
+                push @{ $duration->[ $level ] }, 
                     new DateTime::Duration( $unit => $_ ) 
                     for sort @{$args{$unit}};
                 $level++;
