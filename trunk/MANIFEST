@@ -17,6 +17,7 @@ t/06overflow.t
 t/07set-2.t
 t/08stress.t
 t/09yearly_weekly.t
-t/10interval.t
-t/11interval_start.t
+t/10weekly_more.t
+# t/10interval.t
+# t/11interval_start.t
 
