@@ -9,7 +9,7 @@ use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.03';
+$VERSION = '0.04';
 
 # debug!
 use Data::Dumper;
