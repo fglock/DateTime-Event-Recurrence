@@ -6,7 +6,7 @@ TODO list for Perl module DateTime::Event::Recurrence
 * count hours backwards, in order to avoid DST changes
   which usually occur in the first hours of the day
 
-* new units:
+* new units: finish implementation:
 
   yearly_week_0  ?
   weekly_year  => first day of first week of year, such that

@@ -18,8 +18,8 @@ use Data::Dumper;
 
 BEGIN {
     # setup constructors daily, monthly, ...
+        # year   years   yearly
     my @freq = qw( 
-        year   years   yearly
         month  months  monthly
         day    days    daily
         hour   hours   hourly
@@ -87,6 +87,64 @@ sub weekly {
                            $min, $max, $check_day_overflow );
         }
     );
+}
+
+
+sub _truncate_to_year_weekly {
+    my $tmp = $_[0]->clone;
+    my $week_number = $tmp->week_number - 1;
+    my $week_day =    $tmp->day_of_week_0;
+    $tmp->truncate( to => 'day' )
+        ->subtract( days => $week_day, weeks => $week_number );
+}
+
+sub _increment_year_weekly {
+    # TODO
+}
+
+sub _decrement_year_weekly {
+    # TODO
+}
+
+
+sub yearly {
+    my $class = shift;
+    my %args = @_;
+    my $year_type = delete $args{year_type} || 'monthly';
+    # TODO: move these parameters into a hash
+    my ( $duration, $min, $max, $check_day_overflow ) =
+        _setup_parameters( base => 'year', %args );
+    return DateTime::Set->empty_set if $duration == -1;
+
+    return DateTime::Set->from_recurrence(
+        next => sub {
+            my $tmp = $_[0]->clone;
+            $tmp->truncate( to => 'year' );
+            _get_next( $_[0], $tmp, 'years', $duration,
+                       $min, $max, $check_day_overflow );
+        },
+        previous => sub {
+            my $tmp = $_[0]->clone;
+            $tmp->truncate( to => 'year' );
+            _get_previous( $_[0], $tmp, 'years', $duration,
+                           $min, $max, $check_day_overflow );
+        }
+    ) if $year_type eq 'monthly';
+
+    return DateTime::Set->from_recurrence(
+        next => sub {
+            my $tmp = _truncate_to_year_weekly( $_[0] );
+            _get_next( $_[0], $tmp, 'years_weekly', $duration,
+                       $min, $max, $check_day_overflow );
+        },
+        previous => sub {
+            my $tmp = _truncate_to_year_weekly( $_[0] );
+            _get_previous( $_[0], $tmp, 'years_weekly', $duration,
+                           $min, $max, $check_day_overflow );
+        }
+    ) if $year_type eq 'weekly';
+
+    die 'invalid year type';
 }
 
 
