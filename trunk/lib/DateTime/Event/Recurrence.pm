@@ -165,13 +165,23 @@ sub _month {
     return 12 * $_[0]->year + $_[0]->month - 1 ;
 }
 
+sub _day { $_[0]->{local_rd_days} }
 
 sub _week {
     # get the internal week number
     # $_[1] is the "week start day"
     use integer;
-    return ( $_[0]->{local_rd_days} - $_[1] ) / 7;
+    return ( _day( $_[0] ) - $_[1] ) / 7;
 }
+
+sub _hour { _day($_[0]) * 24 + $_[0]->hour }
+
+sub _minute { _hour($_[0]) * 60 + $_[0]->minute }
+
+sub _second { _minute($_[0]) * 60 + $_[0]->second }
+  # my $seconds = 86400 * _day($tmp) + $tmp->{local_rd_secs};
+  # a 11-digit number (floats have 15-digits in linux/win)
+
 
 %truncate = (
     (
@@ -311,6 +321,8 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 %truncate_interval = (
     # @_ = ( date, $args )
 
+    # TODO: auto-generate these subs
+    
     years   => sub { 
         my $tmp = $_[0]->clone;
         $tmp->truncate( to => 'year' );
@@ -321,46 +333,40 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 
     months  => sub { 
         my $tmp = $_[0]->clone;
-        my $months = _month( $_[0] );
         $tmp->truncate( to => 'month' );
-        _add( $tmp, months => $_[1]{offset} - ( $months % $_[1]{interval} ) );
+        _add( $tmp, months => $_[1]{offset} - ( _month($_[0]) % $_[1]{interval} ) );
         _add( $tmp, months => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
     days  => sub { 
         my $tmp = $_[0]->clone;
-        #  $_[0]->{local_rd_days}  is not good OO ...
         $tmp->truncate( to => 'day' );
-        _add( $tmp, days => $_[1]{offset} - ( $_[0]->{local_rd_days} % $_[1]{interval} ) );
+        _add( $tmp, days => $_[1]{offset} - ( _day($_[0]) % $_[1]{interval} ) );
         _add( $tmp, days => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
     hours  => sub {
         my $tmp = $_[0]->clone;
-        my $hours = $tmp->{local_rd_days} * 24 + $tmp->hour;
         $tmp->truncate( to => 'hour' );
-        _add( $tmp, hours => $_[1]{offset} - ( $hours % $_[1]{interval} ) );
+        _add( $tmp, hours => $_[1]{offset} - ( _hour($_[0]) % $_[1]{interval} ) );
         _add( $tmp, hours => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
     minutes  => sub {
         my $tmp = $_[0]->clone;
-        my $minutes = 60 * ( $tmp->{local_rd_days} * 24 + $tmp->hour ) + $tmp->minute;
         $tmp->truncate( to => 'minute' );
-        _add( $tmp, minutes => $_[1]{offset} - ( $minutes % $_[1]{interval} ) );
+        _add( $tmp, minutes => $_[1]{offset} - ( _minute($_[0]) % $_[1]{interval} ) );
         _add( $tmp, minutes => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
     seconds  => sub {
         my $tmp = $_[0]->clone;
-        my $seconds = 86400 * $tmp->{local_rd_days} + $tmp->{local_rd_secs};
-        # a 11-digit number (floats have 15-digits in linux/win)
         $tmp->truncate( to => 'second' );
-        _add( $tmp, seconds => $_[1]{offset} - ( $seconds % $_[1]{interval} ) );
+        _add( $tmp, seconds => $_[1]{offset} - ( _second($_[0]) % $_[1]{interval} ) );
         _add( $tmp, seconds => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
@@ -444,12 +450,16 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 # -------- CONSTRUCTORS
 
 BEGIN {
-    # setup constructors daily, ...
+    # setup all constructors: daily, ...
     my @freq = qw(
+        years   yearly
+        months  monthly
+        weeks   weekly
         days    daily
         hours   hourly
         minutes minutely
         seconds secondly );
+
     while ( @freq ) 
     {
         my ( $name, $namely ) = ( shift @freq, shift @freq );
@@ -472,104 +482,14 @@ BEGIN {
                       );
 
                   my $ical_string = uc( "RRULE:FREQ=$namely" );
-                  $ical_string .= $_args->{ical_string} if defined $_args->{ical_string};
+                  $ical_string .= $_args->{ical_string} 
+                      if defined $_args->{ical_string};
                   $set->set_ical( include => [ $ical_string ] ); 
                   # warn $ical_string;
                   return $set;
                 };
     }
 } # BEGIN
-
-
-sub weekly {
-    my $class = shift;
-    my %args = @_;
-
-    my $_args =
-        _setup_parameters( base => 'weeks', %args );
-    return DateTime::Set->empty_set if $_args == -1;
-
-    # XXX move this to _setup_parameters()
-    my $ical_string = "RRULE:FREQ=WEEKLY";
-    if ( defined $_args->{ical_string} ) 
-    {
-        my ($by) = $_args->{ical_string} =~ /(BYMONTHDAY=.*?)(;|$)/;
-        if ( defined $by ) 
-        {
-            # print "ICAL STRING: ".$_args->{ical_string}, "\n";
-            my ( undef, @days ) = split( /[=,]/, $by );
-            # map numbers to rfc2445 weekdays 
-            my $by2 = join( ',', 
-                map { exists( $ical_days{ $_ } ) ? $ical_days{ $_ } : $_ } 
-                @days );
-            $_args->{ical_string} =~ s/$by/BYDAY=$by2/;
-        }
-        $ical_string .= $_args->{ical_string};
-    }
-    # warn $ical_string;
-
-    # $_args->{week_start_day} = $week_start_day;
-
-    my $set = DateTime::Set::ICal->from_recurrence(
-        next => sub {
-            _get_next( $_[0], $_args );
-        },
-        previous => sub {
-            _get_previous( $_[0], $_args );
-        }
-    );
-    $set->set_ical( include => [ $ical_string ] );
-    return $set;
-}
-
-
-
-sub monthly {
-    my $class = shift;
-    my %args = @_;
-
-    my $_args =
-        _setup_parameters( base => 'months', %args );
-    return DateTime::Set->empty_set if $_args == -1;
-
-    my $set = DateTime::Set::ICal->from_recurrence(
-        next => sub {
-            _get_next( $_[0], $_args );
-        },
-        previous => sub {
-            _get_previous( $_[0], $_args );
-        }
-    );
-    my $ical_string = "RRULE:FREQ=MONTHLY";
-    $ical_string .= $_args->{ical_string} if defined $_args->{ical_string};
-    $set->set_ical( include => [ $ical_string ] );
-    # warn $ical_string;
-    return $set;
-}
-
-
-sub yearly {
-    my $class = shift;
-    my %args = @_;
-
-    my $_args =
-        _setup_parameters( base => 'years', %args );
-    return DateTime::Set->empty_set if $_args == -1;
-
-    my $set = DateTime::Set::ICal->from_recurrence(
-        next => sub {
-            _get_next( $_[0], $_args );
-        },
-        previous => sub {
-            _get_previous( $_[0], $_args );
-        }
-    );
-    my $ical_string = "RRULE:FREQ=YEARLY";
-    $ical_string .= $_args->{ical_string} if defined $_args->{ical_string};
-    $set->set_ical( include => [ $ical_string ] );
-    # warn $ical_string;
-    return $set;
-}
 
 
 # method( hours => 10 )
@@ -761,6 +681,22 @@ sub _setup_parameters {
             $level++;
     }
 
+    if ( $base eq 'weeks' ) 
+    {
+        my ($by) = $ical_string =~ /(BYMONTHDAY=.*?)(;|$)/;
+        if ( defined $by ) 
+        {
+            # warn "ICAL STRING: ".$ical_string, "\n";
+            my ( undef, @days ) = split( /[=,]/, $by );
+            # map numbers to rfc2445 weekdays 
+            my $by2 = join( ',', 
+                map { exists( $ical_days{ $_ } ) ? $ical_days{ $_ } : $_ } 
+                @days );
+            $ical_string =~ s/$by/BYDAY=$by2/;
+            # warn "ICAL STRING: ".$ical_string, "\n";
+        }
+    }
+    
     if ( $start && $interval )
     {
             # get offset 
@@ -775,8 +711,7 @@ sub _setup_parameters {
             # print STDERR "start: ".$start->datetime."\n";
             # print STDERR "base: ".$tmp->datetime." $base\n";
 
-            # TODO: - must change this to use the same difference algorithm as
-            #   the subs above.
+            # must use the same difference algorithm as the subs above.
 
             if ( $base eq 'years' ) {
                 $offset = $start->year - $tmp->year;
@@ -791,23 +726,16 @@ sub _setup_parameters {
                           _week( $tmp, $weekdays_1{ $week_start_day } );
             }
             elsif ( $base eq 'days' ) {
-                $offset = $start->{local_rd_days} - $tmp->{local_rd_days};
+                $offset = _day($start) - _day($tmp);
             }
             elsif ( $base eq 'hours' ) {
-                $offset = $start->{local_rd_days} * 24 + $start->hour -
-                          $tmp->{local_rd_days} * 24   - $tmp->hour;
+                $offset = _hour($start) - _hour($tmp);
             }
             elsif ( $base eq 'minutes' ) {
-                $offset = 60 * ( $start->{local_rd_days} * 24 + $start->hour ) +
-                          $start->minute -
-                          60 * ( $tmp->{local_rd_days} * 24 + $tmp->hour )     -
-                          $tmp->minute;
+                $offset = _minute($start) - _minute($tmp);
             }
             elsif ( $base eq 'seconds' ) {
-                $offset = 86400 * $start->{local_rd_days} + 
-                          $start->{local_rd_secs} -
-                          86400 * $tmp->{local_rd_days}   - 
-                          $tmp->{local_rd_secs};
+                $offset = _second($start) - _second($tmp);
             }
 
             $offset = $offset % $interval if defined $interval;
