@@ -386,6 +386,7 @@ sub _get_next {
     my ( $self, $base, $unit, $duration, $min, $max, $check_day_overflow ) = @_;
     if ( $duration ) 
     {
+        # warn "while ( ( ".$base->datetime." + ".$max->[0]->days." ) <= ".$self->datetime." ) ";
         while ( ( $base + $max->[0] ) <= $self ) 
         {
             if ( $unit eq 'years_weekly' )
