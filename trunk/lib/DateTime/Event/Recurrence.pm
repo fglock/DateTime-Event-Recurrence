@@ -102,7 +102,7 @@ use DateTime::Set;
 use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
-$VERSION = 0.08;
+$VERSION = 0.09;
 
 use constant INFINITY     =>       100 ** 100 ** 100 ;
 use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
@@ -664,6 +664,11 @@ sub _setup_parameters {
         }
 
         $ical_string = ";INTERVAL=$interval" if $interval && $interval > 1;
+        if ( $week_start_day && $week_start_day ne 'mo' )
+        {
+            $ical_string .= ";WKST=". uc($week_start_day) 
+                if exists $weekdays{$week_start_day};
+        }
 
         for my $unit ( 
                  qw( months weeks days hours minutes seconds nanoseconds ) 
