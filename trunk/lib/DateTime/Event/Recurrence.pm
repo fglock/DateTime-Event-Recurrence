@@ -27,6 +27,11 @@ my %weekdays = qw( mo 1 tu 2 we 3 th 4 fr 5 sa 6 su 7 );
 
 my %weekdays_1 = qw( 1mo 1  1tu 2  1we 3  1th 4  1fr 5  1sa 6  1su 7 );
 
+sub _week_year {
+    # get the year number, in 'week' mode
+    # the datetime must be near the beginning of the year!
+    return $_[0]->clone->add( months => 1 )->year;
+}
 
 %truncate = (
     (
@@ -49,11 +54,24 @@ my %weekdays_1 = qw( 1mo 1  1tu 2  1we 3  1th 4  1fr 5  1sa 6  1su 7 );
     years_weekly => sub {
         my $tmp;
         my $base = $_[0]->clone->add( months => 1 )->truncate( to => 'year' );
-        # warn "start of ".$_[0]->datetime;
+        my $val;
+        my $diff;
+        # print STDERR "start of ".$_[0]->datetime. " $_[1]{week_start_day}\n";
         while(1) {
-            $tmp = $base->clone
-                        ->add( days =>  3 - ( ( 1 + $base->day_of_week + $weekdays{ $_[1]{week_start_day} } ) % 7 ) );
-            # warn "got ".$tmp->datetime;
+            $tmp = $base->clone;
+
+            $val = $weekdays_1{ $_[1]{week_start_day} };
+            if ( $val ) {
+                $diff = $val - $base->day_of_week;
+                $diff += 7 if $diff < 0;
+            }
+            else {
+                $diff = ( $weekdays{ $_[1]{week_start_day} } - $base->day_of_week ) % 7;
+                $diff -= 7 if $diff > 3;
+            }
+            $tmp->add( days =>  $diff );
+
+            # print STDERR "got ".$tmp->datetime." val $val base-day:".$weekdays{ $_[1]{week_start_day} }." ".$base->day_of_week." diff ".$diff."\n";
             return $tmp if $tmp <= $_[0];
             $base->add( years => -1 );
         }
@@ -75,11 +93,13 @@ my %weekdays_1 = qw( 1mo 1  1tu 2  1we 3  1th 4  1fr 5  1sa 6  1su 7 );
     ),
 
     years_weekly => sub {
-        my $year = $_[0]->week_year;
+        my $year = _week_year( $truncate{years_weekly}( $_[0], $_[1] ) );
+        my $base = $_[0]->clone;
         do {
-            $_[0]->add( months => 11 );
-        } while $year >= $_[0]->week_year;
-        $_[0] = $truncate{years_weekly}( $_[0], $_[1] );
+            $base->add( months => 11 );
+            $_[0] = $truncate{years_weekly}( $base, $_[1] );
+        } while $year >= _week_year( $_[0] );
+        return $_[0];
     },
 );
 
@@ -92,11 +112,19 @@ my %weekdays_1 = qw( 1mo 1  1tu 2  1we 3  1th 4  1fr 5  1sa 6  1su 7 );
     ),
 
     years_weekly => sub {
-        my $year = $_[0]->week_year;
+        my $year = _week_year( $truncate{years_weekly}( $_[0], $_[1] ) );
+        my $base = $_[0]->clone;
         do {
-            $_[0]->subtract( months => 11 );
-        } while $year <= $_[0]->week_year;
-        $_[0] = $truncate{years_weekly}( $_[0], $_[1] );
+            $base->add( months => -11 );
+            $_[0] = $truncate{years_weekly}( $base, $_[1] );
+        } while $year <= _week_year( $_[0] );
+        return $_[0];
+
+        # my $year = $_[0]->week_year;
+        # do {
+        #     $_[0]->subtract( months => 11 );
+        # } while $year <= $_[0]->week_year;
+        # $_[0] = $truncate{years_weekly}( $_[0], $_[1] );
     },
 );
 
@@ -188,7 +216,7 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
         # print STDERR $_[0]->datetime."\n";
         my $tmp = $truncate{years_weekly}( $_[0], $_[1] );
         # print STDERR "  trunc " . $tmp->datetime."\n";
-        while ( $_[1]{offset} != ( $tmp->week_year % $_[1]{interval} ) ) 
+        while ( $_[1]{offset} != ( _week_year( $tmp ) % $_[1]{interval} ) ) 
         {
             $previous_unit{years_weekly}( $tmp, $_[1] );
             # print STDERR "    prev " . $tmp->datetime."\n";
@@ -276,16 +304,18 @@ sub yearly {
     my $class = shift;
     my %args = @_;
 
+    my $week_start_day;
+    $week_start_day = delete $args{week_start_day} || 'mo';
+    die "yearly: invalid week start day ($week_start_day)"
+        unless $weekdays{ $week_start_day } ||
+               $weekdays_1{ $week_start_day };
+
     my $_args =
         _setup_parameters( base => 'years', %args );
     return DateTime::Set->empty_set if $_args == -1;
 
     if ( exists $args{weeks} ) 
     {
-        my $week_start_day;
-        $week_start_day = delete $args{week_start_day} || 'mo';
-        die 'week start day not implemented: '.$week_start_day 
-            if $week_start_day ne 'mo';
         $_args->{week_start_day} = $week_start_day;
 
         $_args->{unit} = 'years_weekly';
