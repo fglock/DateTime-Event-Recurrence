@@ -882,7 +882,6 @@ sub _get_occurence_by_index {
     my $j;
     my $i;
     my $next = $base->clone;
-    # print STDERR "_get_occurence_by_index ".$base->datetime." $occurence/".$args->{total_durations}." \n";
     for $j ( 0 .. $#{$args->{duration}} ) 
     {
         $i = int( $occurence / $args->{total_level}[$j] );
@@ -898,13 +897,10 @@ sub _get_occurence_by_index {
              $next->month != $base->month )
         {
             # month overflow (month has no 31st day)
-            # print STDERR "month overflow at occurence $_[1] level $j arg $i\n";
             my $previous = $i * $args->{total_level}[$j] - 1;
-            # print STDERR "total_level ".( $args->{total_level}[$j] )." previous $previous \n";
             return ( undef, $previous );
         }
     }
-    # print STDERR "found: ".$next->datetime."\n";
     return ( $next, -1 );
 }
 
@@ -1022,6 +1018,10 @@ sub _get_next {
     return $base;
 }
 
+1;
+
+__END__
+
 =head1 NAME
 
 DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurrences.
@@ -1122,7 +1122,7 @@ negative hours since DST changes almost always occur at the beginning
 of the day.
 
 The value C<60> for seconds (the leap second) is ignored.  If you
-i<really> want the leap second, then specify the second as C<-1>.
+I<really> want the leap second, then specify the second as C<-1>.
 
 You can also provide multiple sets of duration arguments, such as
 this:
@@ -1141,6 +1141,8 @@ To create a set of recurrences every thirty seconds, we could do this:
 
     my $every_30_seconds_set =
         DateTime::Event::Recurrence->minutely( seconds => [ 0, 30 ] );
+
+=back
 
 =head2 Interval
 
@@ -1184,7 +1186,6 @@ C<weekly> and C<yearly> recurrences.
 starts in this week-day, and has I<all days> in this period.  Works for
 C<weekly>, C<monthly> and C<yearly> recurrences.
 
-=back
 
 =head1 AUTHOR
 
@@ -1232,5 +1233,4 @@ DateTime::Event::ICal - if you need more complex recurrences.
 DateTime::SpanSet - sets of intervals, including recurring sets of intervals.
 
 =cut
-1;
 
