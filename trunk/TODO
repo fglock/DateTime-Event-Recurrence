@@ -1,8 +1,5 @@
 TODO list for Perl module DateTime::Event::Recurrence
 
-* check what are the minimum dependencies requirements 
-  and fill in at Makefile.PL
-
 * count hours backwards, in order to avoid DST changes
   which usually occur in the first hours of the day
 
@@ -16,28 +13,4 @@ TODO list for Perl module DateTime::Event::Recurrence
   - sort each unit ?
 
   - iterate using binary search
-
-* experimental code
-
-# this is supposed to combine 2 events.
-# it doesn't work because the intersection in 
-# the "next" method is not returning a proper value,
-# due to incomplete "iterate" implementation in Set::Infinite.
-
-# "function"
-sub join {
-    my ($self, $other) = @_;
-    return bless {
-        set => $self->as_set->union( $other->as_set )
-    }, ref $self;
-}
-
-# "subroutine"
-sub join_to_event {
-    my $self = shift;
-    $self->{set} = $self->as_set->union( $_[0]->as_set );
-    delete $self->{next};
-    delete $self->{previous};
-    return $self;
-}
 
