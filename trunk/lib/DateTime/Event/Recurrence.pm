@@ -21,7 +21,11 @@ use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
 
 use vars qw( %truncate %next_unit %previous_unit );
 
-my $week_start_day = 1;  # 1 = monday
+#my $week_start_day = 1;  # 1 = monday
+
+my %weekdays = qw( mo 1 tu 2 we 3 th 4 fr 5 sa 6 su 7 );
+
+my %weekdays_1 = qw( 1mo 1  1tu 2  1we 3  1th 4  1fr 5  1sa 6  1su 7 );
 
 
 %truncate = (
@@ -48,7 +52,7 @@ my $week_start_day = 1;  # 1 = monday
         # warn "start of ".$_[0]->datetime;
         while(1) {
             $tmp = $base->clone
-                        ->add( days =>  3 - ( ( 1 + $base->day_of_week + $week_start_day ) % 7 ) );
+                        ->add( days =>  3 - ( ( 1 + $base->day_of_week + $weekdays{ $_[1]{week_start_day} } ) % 7 ) );
             # warn "got ".$tmp->datetime;
             return $tmp if $tmp <= $_[0];
             $base->add( years => -1 );
@@ -75,7 +79,7 @@ my $week_start_day = 1;  # 1 = monday
         do {
             $_[0]->add( months => 11 );
         } while $year >= $_[0]->week_year;
-        $_[0] = $truncate{years_weekly}( $_[0] );
+        $_[0] = $truncate{years_weekly}( $_[0], $_[1] );
     },
 );
 
@@ -92,7 +96,7 @@ my $week_start_day = 1;  # 1 = monday
         do {
             $_[0]->subtract( months => 11 );
         } while $year <= $_[0]->week_year;
-        $_[0] = $truncate{years_weekly}( $_[0] );
+        $_[0] = $truncate{years_weekly}( $_[0], $_[1] );
     },
 );
 
@@ -182,11 +186,11 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 
     years_weekly => sub {
         # print STDERR $_[0]->datetime."\n";
-        my $tmp = $truncate{years_weekly}( $_[0] );
+        my $tmp = $truncate{years_weekly}( $_[0], $_[1] );
         # print STDERR "  trunc " . $tmp->datetime."\n";
         while ( $_[1]{offset} != ( $tmp->week_year % $_[1]{interval} ) ) 
         {
-            $previous_unit{years_weekly}( $tmp );
+            $previous_unit{years_weekly}( $tmp, $_[1] );
             # print STDERR "    prev " . $tmp->datetime."\n";
         }
         return $tmp;
@@ -206,7 +210,7 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
         # print STDERR $_[0]->datetime."\n";
         for ( 1 .. $_[1]->{interval} ) 
         {
-            $next_unit{years_weekly}( $_[0] );
+            $next_unit{years_weekly}( $_[0], $_[1] );
             # print STDERR "  $_ next " . $_[0]->datetime."\n";
         }
     },
@@ -225,7 +229,7 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
         # print STDERR $_[0]->datetime."\n";
         for ( 1 .. $_[1]->{interval} ) 
         {
-            $previous_unit{years_weekly}( $_[0] );
+            $previous_unit{years_weekly}( $_[0], $_[1] );
             # print STDERR "  $_ prev " . $_[0]->datetime."\n";
         }
     },
@@ -279,9 +283,10 @@ sub yearly {
     if ( exists $args{weeks} ) 
     {
         my $week_start_day;
-        $week_start_day = delete $args{week_start_day} || 1;
-            die 'week start day not implemented: '.$week_start_day 
-                if $week_start_day != 1;
+        $week_start_day = delete $args{week_start_day} || 'mo';
+        die 'week start day not implemented: '.$week_start_day 
+            if $week_start_day ne 'mo';
+        $_args->{week_start_day} = $week_start_day;
 
         $_args->{unit} = 'years_weekly';
 
@@ -641,7 +646,7 @@ sub _get_occurence_by_index {
 
         if ( $args->{duration}[$j][$i]->is_negative )
         {
-            $next_unit{ $args->{level_unit}[$j] }( $next );
+            $next_unit{ $args->{level_unit}[$j] }( $next, $args );
         }
         $next->add_duration( $args->{duration}[$j][$i] );
 
