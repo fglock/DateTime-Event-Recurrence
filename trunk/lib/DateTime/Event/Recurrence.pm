@@ -419,14 +419,18 @@ and the invalid datetimes are skipped.
 
 The behaviour when other duration overflows occur, such as when a
 duration is bigger than the period, is undefined and
-is version dependent.
+is version dependent. 
+Invalid parameter values are usually skipped.
 
 Note that the 'hours' duration is affected by DST changes and might
 return unexpected results.  In particular, it would be possible to
 specify a recurrence that creates nonexistent datetimes.
 This behaviour might change in future versions.
+Some possible alternatives are to use
+floating times, or to use negative hours since 
+DST changes usually occur in the beginning of the day.
 
-The value C<60> for seconds (leap second) is ignored. 
+The value C<60> for seconds (the leap second) is ignored. 
 If you i<really> want the leap second, then specify 
 the second as C<-1>.
 
