@@ -1,3 +1,8 @@
+
+- added year_type => 'weekly' to yearly.
+  default is year_type => 'monthly'.
+
+0.02
 - tests month-day overflow for positive day offsets, if 'month'
   argument is specified. Skips a datetime if it is invalid.
 - setup structure to allow other overflow tests.

@@ -94,16 +94,27 @@ sub _truncate_to_year_weekly {
     my $tmp = $_[0]->clone;
     my $week_number = $tmp->week_number - 1;
     my $week_day =    $tmp->day_of_week_0;
+    # warn $tmp->datetime." is week $week_number day $week_day";
     $tmp->truncate( to => 'day' )
         ->subtract( days => $week_day, weeks => $week_number );
 }
 
 sub _increment_year_weekly {
-    # TODO
+    my $tmp = shift;
+    my $year = $tmp->week_year;
+    do {
+        $tmp->add( months => 11 );
+    } until $year < $tmp->year;
+    _truncate_to_year_weekly( $tmp );
 }
 
 sub _decrement_year_weekly {
-    # TODO
+    my $tmp = shift;
+    my $year = $tmp->week_year;
+    do {
+        $tmp->subtract( months => 11 );
+    } until $year > $tmp->year;
+    _truncate_to_year_weekly( $tmp );
 }
 
 
@@ -293,8 +304,17 @@ sub _get_previous {
     my ( $self, $base, $unit, $duration, $min, $max, $check_day_overflow ) = @_;
     if ( $duration ) 
     {
-        $base->subtract( $unit => 1 )
-            while ( $base + $min->[0] ) >= $self;
+        while ( ( $base + $min->[0] ) >= $self ) 
+        {
+            if ( $unit eq 'years_weekly' ) 
+            {
+                $base = _decrement_year_weekly( $base );
+            }
+            else 
+            {
+                $base->subtract( $unit => 1 );
+            }
+        };
         my $j = 0;
         my $next;
         my $i;
@@ -340,7 +360,17 @@ sub _get_previous {
     }
     else 
     {
-        $base->subtract( $unit => 1 ) while $base >= $self;
+        while ( $base >= $self ) 
+        {
+            if ( $unit eq 'years_weekly' )
+            {
+                $base = _decrement_year_weekly( $base );
+            }
+            else
+            {
+                $base->subtract( $unit => 1 );
+            }
+        };
     }
     return $base;
 }
@@ -351,8 +381,17 @@ sub _get_next {
     my ( $self, $base, $unit, $duration, $min, $max, $check_day_overflow ) = @_;
     if ( $duration ) 
     {
-        $base->add( $unit => 1 )
-            while ( $base + $max->[0] ) <= $self;
+        while ( ( $base + $max->[0] ) <= $self ) 
+        {
+            if ( $unit eq 'years_weekly' )
+            {
+                $base = _increment_year_weekly( $base );
+            }
+            else
+            {
+                $base->add( $unit => 1 );
+            }
+        };
         my $j = 0;
         my $next;
         my $i;
@@ -396,7 +435,17 @@ sub _get_next {
     }
     else 
     {
-        $base->add( $unit => 1 ) while $base <= $self;
+        while ( $base <= $self )
+        {
+            if ( $unit eq 'years_weekly' )
+            {
+                $base = _increment_year_weekly( $base );
+            }
+            else
+            {
+                $base->add( $unit => 1 );
+            }
+        };
     }
     return $base;
 }
