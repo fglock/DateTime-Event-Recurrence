@@ -22,7 +22,7 @@ TODO list for Perl module DateTime::Event::Recurrence
   - setup a single big @duration - doesn't work well with mixed 
     positive and negative values
 
-  - sort each unit, with negative values at the end, then
+  - sort each unit, then
     iterate through each unit (binary search?)
 
 * experimental code

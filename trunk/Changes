@@ -1,3 +1,14 @@
+0.00_06
+
+- works with multiple durations like
+    $r = DT::E::R->monthly (
+                       duration => \@durations );
+- durations _must_ be pre-sorted.
+- _doesn't_ work with "matrix" durations like
+    $r = DT::E::R->monthly (
+                       days => [ 4, 15, 18 ],
+                       hours => [ 10, 20 ] );
+
 0.00_05
 
 - refactored constructor subs

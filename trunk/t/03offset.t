@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 25;
+use Test::More tests => 27;
 
 use DateTime;
 use DateTime::Event::Recurrence;
@@ -82,7 +82,7 @@ use DateTime::Event::Recurrence;
 
     my $daily = daily DateTime::Event::Recurrence ( 
         duration => [
-            # new DateTime::Duration( hours => -1 ),
+            new DateTime::Duration( hours => -1 ),
             new DateTime::Duration( hours => 10 ),
             new DateTime::Duration( hours => 14 ),
          ] );
@@ -91,8 +91,8 @@ use DateTime::Event::Recurrence;
 
     $dt = $daily->next( $dt1 );
     is ( $dt->datetime, '2003-04-28T14:00:00', 'next' );
-    # $dt = $daily->next( $dt );
-    # is ( $dt->datetime, '2003-04-28T23:00:00', 'next' );
+    $dt = $daily->next( $dt );
+    is ( $dt->datetime, '2003-04-28T23:00:00', 'next' );
     $dt = $daily->next( $dt );
     is ( $dt->datetime, '2003-04-29T10:00:00', 'next' );
     $dt = $daily->next( $dt );
@@ -101,7 +101,9 @@ use DateTime::Event::Recurrence;
     is ( $dt1->datetime, '2003-04-28T12:10:45', 'immutable' );
 
     $dt = $daily->previous( $dt1 );
-    is ( $dt->datetime, '2003-04-28T10:00:00', 'previous' );
+    is ( $dt->datetime, '2003-04-28T10:00:00', 'previous '.$dt->datetime );
+    $dt = $daily->previous( $dt );
+    is ( $dt->datetime, '2003-04-27T23:00:00', 'previous' );
     $dt = $daily->previous( $dt );
     is ( $dt->datetime, '2003-04-27T14:00:00', 'previous' );
 

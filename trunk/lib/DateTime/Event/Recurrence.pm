@@ -9,7 +9,7 @@ use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.00_05';
+$VERSION = '0.00_06';
 
 # -------- CONSTRUCTORS
 
@@ -88,15 +88,13 @@ sub _get_previous {
     {
         $base->subtract( $unit => 1 )
             while ( $base + @$duration[0] ) >= $self;
-        my $result = $base->clone;
-        $result->add_duration( @$duration[0] );
-        for my $i ( 1 .. $#$duration ) {
+        my $i;
+        for ( $i = $#$duration; $i >= 0; $i-- ) {
             my $next = $base->clone;
             $next->add_duration( @$duration[$i] );
-            return $result if $next >= $self;
-            $result = $next;
+            return $next if $next < $self;
         }
-        $base = $result;
+        die "invalid previous";
     }
     else 
     {
@@ -111,16 +109,12 @@ sub _get_next {
     {
         $base->add( $unit => 1 )
             while ( $base + @$duration[-1] ) <= $self;
-        my $result = $base->clone;
-        $result->add_duration( @$duration[-1] );
-        my $i;
-        for ( $i = $#$duration, $i > 0, $i-- ) {
+        for my $i ( 0 .. $#$duration ) {
             my $next = $base->clone;
             $next->add_duration( @$duration[$i] );
-            return $result if $next <= $self;
-            $result = $next;
+            return $next if $next > $self;
         }
-        $base = $result;
+        die "invalid next";
     }
     else 
     {
