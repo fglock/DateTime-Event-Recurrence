@@ -7,9 +7,8 @@ use Test::More tests => 5;
 use DateTime;
 use DateTime::Event::Recurrence;
 
-TODO:
 {
-    local $TODO = "intermixed neg/pos args is not implemented";
+    # intermixed neg/pos args
 
     my $dt1 = new DateTime( year => 2003, month => 4, day => 30,
                            hour => 1, minute => 2, second => 3,
@@ -17,7 +16,7 @@ TODO:
                            time_zone => 'UTC' );
 
     my $daily = daily DateTime::Event::Recurrence ( 
-            hours => [ 10, 20, -10, -20 ]
+            hours => [ 10, 10, 20, -10, -10, -20 ]
         );
     my $dt;
 
@@ -30,7 +29,6 @@ TODO:
     $dt = $daily->next( $dt );
     is ( $dt->datetime, '2003-04-30T20:00:00', 'next' );
     $dt = $daily->next( $dt );
-    is ( $dt->datetime, '2003-04-31T04:00:00', 'next' );
-
+    is ( $dt->datetime, '2003-05-01T04:00:00', 'next' );
 }
 
