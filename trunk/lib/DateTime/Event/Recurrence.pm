@@ -1023,7 +1023,7 @@ __END__
 
 =head1 NAME
 
-DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurrences.
+DateTime::Event::Recurrence - DateTime::Set extension for computing basic recurrences.
 
 =head1 SYNOPSIS
 
@@ -1035,7 +1035,7 @@ DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurr
                          day    => 20,
                        );
 
- my $daily_set = daily DateTime::Event::Recurrence;
+ my $daily_set = DateTime::Event::Recurrence->daily;
 
  my $dt_next = $daily_set->next( $dt );
 
@@ -1136,17 +1136,17 @@ specifies a recurrence occuring every day at these 9 different times:
   14:15,  14:30,  14:45,   # +14h         ( +15min / +30min / last 15min (-15) )
   23:15,  23:30,  23:45,   # last 1h (-1) ( +15min / +30min / last 15min (-15) )
 
-To create a set of recurrences every thirty seconds, we could do this:
+To create a set of recurrences occuring every thirty seconds, we could do this:
 
     my $every_30_seconds_set =
         DateTime::Event::Recurrence->minutely( seconds => [ 0, 30 ] );
 
 =back
 
-=head2 Interval
+=head2 "interval" and "start" parameters
 
 The C<interval> parameter represents how often the recurrence rule
-repeats:
+repeats. The optional C<start> parameter specify where to start counting:
 
     my $dt = DateTime->new( year => 2003, month => 6, day => 15 );
 
@@ -1157,7 +1157,7 @@ repeats:
         start =>    $dt );
 
 specifies a recurrence that happens at 10:30 on the day specified by
-C<$dt>, and then at every 11 days I<before and after> C<$dt>.  So we
+C<start => $dt>, and then at every 11 days I<before and after> C<$dt>.  So we
 get a set like this:
 
     ...
@@ -1166,7 +1166,7 @@ get a set like this:
     2003-06-26T10:30:00,
     ...
 
-=head2 Week start day
+=head2 "week start day" parameter
 
 The C<week_start_day> parameter is intended for internal use by the
 C<DateTime::Event::ICal> module, for generating RFC2445 recurrences.
