@@ -8,6 +8,7 @@ TODO list for Perl module DateTime::Event::Recurrence
 
 * new units:
 
+  yearly_week_0  ?
   weekly_year  => first day of first week of year, such that
                   we can get week #34 by adding 33 weeks!
 

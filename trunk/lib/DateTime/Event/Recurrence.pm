@@ -44,14 +44,16 @@ BEGIN {
                             $tmp->truncate( to => $name );
                             _get_next( $_[0], $tmp, $names,
                                        $duration, $min, $max, 
-                                       $check_day_overflow ); };
+                                       $check_day_overflow ); 
+                          };
 
                   my $prev =
                       sub { my $tmp = $_[0]->clone;
                             $tmp->truncate( to => $name );
                             _get_previous( $_[0], $tmp, $names,
                                            $duration, $min, $max, 
-                                           $check_day_overflow ); };
+                                           $check_day_overflow ); 
+                          };
 
                   return
                       DateTime::Set->from_recurrence
@@ -65,6 +67,7 @@ BEGIN {
 
 sub weekly {
     my $class = shift;
+    # TODO: move these parameters into a hash
     my ( $duration, $min, $max, $check_day_overflow ) = 
         _setup_parameters( base => 'week', @_);
     return DateTime::Set->empty_set if $duration == -1;
@@ -114,7 +117,9 @@ sub _setup_parameters {
     }
     elsif ( keys %args ) {
         my $level = 0;
-        for my $unit ( qw( months weeks days hours minutes seconds nanoseconds ) ) {
+        for my $unit ( 
+                 qw( months weeks days hours minutes seconds nanoseconds ) 
+            ) {
 
             next unless exists $args{$unit};
 
@@ -220,8 +225,6 @@ sub _setup_parameters {
                 $min[$i] += $min[$i + 1];
                 $max[$i] += $max[$i + 1];
             }
-            # print " i= $i n= $#$duration ". Dumper( $duration->[$i] )."\n";
-            # print " ".  Dumper( $min[$i] ) ." .. ". Dumper( $max[$i] )."\n";
         }
     }
 
@@ -247,7 +250,6 @@ sub _get_previous {
                 if ( $check_day_overflow->[$j][$i] ) {
                     $month = $base->month unless $month;
                     if ( $month != $next->month ) {
-                       # warn "day overflow [p]: ".$base->datetime." ".$next->datetime;
                        next if $i > 0;
                        $base->subtract( $unit => 1 );
                        $j = 0;
@@ -256,18 +258,15 @@ sub _get_previous {
                     }
                 }
 
-                # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
                 if ( $j == $#{$duration} ) 
                 {
                     if ( $next < $self ) 
                     {
-                        # print " #$j $i next ". $next->datetime ." \n";
                         last; # return $next;
                     }
                 }
                 elsif (( $next + $min->[ $j + 1 ] ) < $self )
                 {
-                    # print " #$j $i next ". $next->datetime ." \n";
                     last; # return $next;
                 }
             }
@@ -276,7 +275,6 @@ sub _get_previous {
             # print " opt0: ".$base->datetime."  \n";
             if ( $j >= $#{$duration} ) 
             {
-                # print "#0\n";
                 return $base; 
             }
             $j++;
@@ -303,7 +301,6 @@ sub _get_next {
         my $month;
         GET_RECURRENCE: while(1) 
         {
-            # warn "redo $j";
             for $i ( 0 .. $#{ $duration->[$j] } ) 
             {
                 $next = $base + $duration->[$j][$i];
@@ -311,7 +308,6 @@ sub _get_next {
                 if ( $check_day_overflow->[$j][$i] ) {
                     $month = $base->month unless $month;
                     if ( $month != $next->month ) {
-                       # warn "day overflow [n]: ".$base->datetime." ".$next->datetime;
                        $base->add( $unit => 1 );
                        $j = 0;
                        $month = undef;
@@ -319,27 +315,22 @@ sub _get_next {
                     }
                 }
 
-                # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
                 if ( $j == $#{$duration} ) 
                 {
                     if ( $next > $self ) 
                     {
-                        # print " #$j $i next ". $next->datetime ." \n";
                         last; # return $next;
                     }
                 }
                 elsif (( $next + $max->[ $j + 1 ] ) > $self )
                 {
-                    # print " #$j $i next ". $next->datetime ." \n";
                     last; # return $next;
                 }
             }
 
             $base = $next;
-            # print " opt0: ".$base->datetime."  \n";
             if ( $j >= $#{$duration} ) 
             {
-                # print "#0\n";
                 return $base; 
             }
             $j++;
