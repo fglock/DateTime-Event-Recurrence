@@ -125,15 +125,32 @@ sub _setup_parameters {
 
             # TODO: add overflow checks for other units
             # and for negative values
-            if ( ( $args{base} eq 'month' || exists $args{month} ) &&
-                 ( $unit eq 'days' ) ) {
-                @{$args{$unit}} = grep { $_ < 31 } @{$args{$unit}};
+
+            if ( $unit eq 'days' ) {
+                if ( $args{base} eq 'month' || exists $args{month} ) 
+                {   # month day
+                    @{$args{$unit}} = 
+                        grep { $_ < 31 && $_ >= -31 } @{$args{$unit}};
+                }
+                elsif ( $args{base} eq 'week' || exists $args{week} ) 
+                {   # week day
+                    @{$args{$unit}} = 
+                        grep { $_ < 7 && $_ >= -7 } @{$args{$unit}};
+                }
+                else 
+                {   # year day
+                    @{$args{$unit}} =
+                        grep { $_ < 366 && $_ >= -366 } @{$args{$unit}};
+                }
             }
+
             return -1 unless @{$args{$unit}};  # error - no args left
 
             push @{ $duration->[ $level ] }, 
                 new DateTime::Duration( $unit => $_ ) 
                     for sort @{$args{$unit}};
+
+            # prepare to do more overflow checks at runtime
 
             for ( 0 .. $#{$args{$unit}} ) {
                 $check_day_overflow[$level][$_] = 1 
@@ -141,6 +158,7 @@ sub _setup_parameters {
                        ( $unit eq 'days' ) &&
                        ( $duration->[$level][$_]->is_positive );
             }
+
             $level++;
         }
     }
