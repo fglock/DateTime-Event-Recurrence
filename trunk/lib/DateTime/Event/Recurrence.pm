@@ -8,8 +8,8 @@ use DateTime::Set;
 use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
-@ISA     = qw( Exporter );
-$VERSION = '0.00_09';
+@ISA     = qw( DateTime::Set Exporter );
+$VERSION = '0.00_10';
 
 # debug!
 use Data::Dumper;
@@ -32,7 +32,7 @@ BEGIN {
             sub ".__PACKAGE__."::$namely {
                 my \$class = shift;
                 my ( \$duration, \$min, \$max ) = \&_setup_parameters;  # needs \&
-                bless {
+                return DateTime::Event::Recurrence->SUPER::from_recurrence(
                    next => sub { 
                        my \$tmp = \$_[0]->clone;
                        \$tmp->truncate( to => '$name' );
@@ -42,8 +42,8 @@ BEGIN {
                        my \$tmp = \$_[0]->clone;
                        \$tmp->truncate( to => '$name' );
                        _get_previous( \$_[0], \$tmp, '$names', \$duration, \$min, \$max );
-                   }
-                }, \$class;
+                   } 
+                 );
             } ";
         # warn $sub;
         eval $sub;
@@ -55,7 +55,7 @@ BEGIN {
 sub weekly {
     my $class = shift;
     my ( $duration, $min, $max ) = &_setup_parameters;  # needs &
-    bless {
+    return DateTime::Event::Recurrence->SUPER::from_recurrence(
         next => sub { 
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
@@ -68,7 +68,7 @@ sub weekly {
                  ->subtract( days => $_[0]->day_of_week_0 );
             _get_previous( $_[0], $tmp, 'weeks', $duration, $min, $max );
         }
-    }, $class;
+    );
 }
 
 
@@ -246,74 +246,9 @@ sub _get_next {
     return $base;
 }
 
-# ------- ACCESSORS
-# these are (or should be) inheritable by other DateTime::Event::xxx classes
-
-sub as_set {
-    my $self = shift;
-    unless ( exists $self->{set} ) 
-    {
-        $self->{set} = DateTime::Set->from_recurrence( 
-                           recurrence => $self->{next} );
-    }
-    return $self->{set};
-}
-
-sub as_list {
-    my $self = shift;
-    my $span = DateTime::Span->new ( @_ );
-    $self->as_set->intersection( $span )->as_list;
-}
-
-sub contains {
-    my $self = shift;
-    $self->as_set->intersects( $_[0] );
-}
-
-sub next {
-    my $self = shift;
-
-    if ( exists $self->{next} )
-    {
-        $self->{next} ( $_[0]->clone );
-    }
-    else {
-        my $span = new DateTime::Span( after => $_[0] );
-        return $self->as_set->intersection( $span )->next;
-    }
-}
-
-sub current {
-    my $self = shift;
-    return $_[0] if $self->contains( $_[0] );
-    $self->previous( $_[0] );
-}
-
-sub previous {
-    my $self = shift;
-
-    if ( exists $self->{previous} ) 
-    {
-        return $self->{previous} ( $_[0]->clone );
-    }
-    else {
-        my $span = new DateTime::Span( before => $_[0] );
-        return $self->as_set->intersection( $span )->previous;
-    }
-}
-
-sub closest {
-    my $self = shift;
-    # return $_[0] if $self->contains( $_[0] );
-    my $dt1 = $self->current( $_[0] );
-    my $dt2 = $self->next( $_[0] );
-    return $dt1 if ( $_[0] - $dt1 ) <= ( $dt2 - $_[0] );
-    return $dt2;
-}
-
 =head1 NAME
 
-DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurrences
+DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurrences.
 
 =head1 SYNOPSIS
 
@@ -345,7 +280,7 @@ DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurr
 
 =head1 DESCRIPTION
 
-This module will return a DateTime Recurrence object for a given recurrence rule.
+This module will return a DateTime Recurrence-set object for a given recurrence rule.
 
 =head1 USAGE
 
@@ -386,7 +321,7 @@ the ones used by C<crontab> and in C<RFC2445>.
 
     my $daily = daily DateTime::Event::Recurrence ( 
         hours => [ -1, 10, 14 ],
-        minutes => [ 15, 30, -15 ] );
+        minutes => [ -15, 30, 15 ] );
 
 specifies a recurrence occuring everyday at these 9 different times:
 
@@ -421,12 +356,6 @@ of duration objects:
 
 The durations in an Array-of-Arrays specification I<must> be ordered.
 
-=item * as_set
-
-  my $r_set = $r_daily->as_set;
-
-This builds a DateTime::Set recurrence set.
-
 =item * as_list
 
   my @dt = $r_daily->as_list( $span );
@@ -435,23 +364,17 @@ This builds a DateTime array of events that happen inside the span.
 
 =item * previous current next closest
 
-  my $dt = $r_daily->next( $dt );
-
-  my $dt = $r_daily->previous( $dt );
-
-Returns an event related to a datetime.
-
-C<current> returns $dt if $dt is an event. 
-It returns previous event otherwise.
-
-C<closest> returns $dt if $dt is an event. 
-Otherwise it returns the closest event (previous or next).
+See DateTime::Set.
 
 =item * contains
 
   my $bool = $r_daily->contains( $dt );
 
 Verify if a DateTime is a recurrence event.
+
+=item * union intersection complement
+
+See DateTime::Set.
 
 =back
 
