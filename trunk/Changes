@@ -1,3 +1,7 @@
+- fixed and added tests for monthly( week => ...)
+- modified "sort positive values first". Patch by Yitzchak Scott-Thoennes.
+- refactored _setup_parameters()
+
 0.15    2005-01-19
 - array-ref parameter lists are not mutated. Patch by Daisuke Maki.
 - rewritten "sort positive values first" in _setup_parameters()
