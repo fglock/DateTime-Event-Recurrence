@@ -1,7 +1,14 @@
 TODO list for Perl module DateTime::Event::Recurrence
 
-  - add more tests with 'interval' > 1
-  - add more 'previous' tests
+* tests with ICal format, using
+  DateTime::Format::ICal->format_recurrence():
+    wkst
+    interval
+    monthly, week + day (is it day-of-week or day-of-month?)
+
+* add more tests with 'interval' > 1
+
+* add more 'previous' tests
 
 * find out how it behaves with mixed timezones and DST changes
 
