@@ -624,8 +624,18 @@ sub _setup_parameters {
 
             # TODO: sort _after_ normalization
 
+            if ( $unit eq 'days' )
+            {
+                # map rfc2445 weekdays to numbers
+                @{$args{$unit}} = map {
+                        $_ =~ /[a-z]/ ?
+                        $_ = $weekdays{$_} :
+                        $_
+                    } @{$args{$unit}};
+            }
             @{$args{$unit}} = sort { $a <=> $b } @{$args{$unit}};
             # put positive values first
+            # warn "Arguments: $unit = @{$args{$unit}}";
             my @tmp = grep { $_ >= 0 } @{$args{$unit}};
             push @tmp, $_ for grep { $_ < 0 } @{$args{$unit}};
             # print STDERR "$unit => @tmp\n";
