@@ -126,7 +126,16 @@ sub _decrement_year_weekly {
 sub yearly {
     my $class = shift;
     my %args = @_;
+
     my $year_type = delete $args{year_type} || 'monthly';
+
+    my $week_start_day;
+    if ( $year_type eq 'weekly' ) {
+        $week_start_day = delete $args{week_start_day} || 1;
+        die 'week start day not implemented: '.$week_start_day 
+            if $week_start_day != 1;
+    }
+
     # TODO: move these parameters into a hash
     my ( $duration, $min, $max, $check_day_overflow ) =
         _setup_parameters( base => 'year', %args );
@@ -160,7 +169,7 @@ sub yearly {
         }
     ) if $year_type eq 'weekly';
 
-    die 'invalid year type';
+    die 'invalid year type: '.$year_type;
 }
 
 
@@ -505,10 +514,9 @@ given recurrence.
 
 If no parameters are given, then the set members occur at the
 I<beginning> of each recurrence.  For example, by default the
-C<monthly()> method returns a set where each members is the first day
+C<monthly()> method returns a set where each member is the first day
 of the month.
-
-Without parameters, the C<weekly()> without arguments returns
+Without parameters, the C<weekly()> returns
 I<mondays>.
 
 However, you can pass in parameters to alter where these datetimes

@@ -1,17 +1,17 @@
 TODO list for Perl module DateTime::Event::Recurrence
 
-* document argument overflow tests,
-  add more argument overflow tests
+* add more argument overflow tests:
+  day in year, 
+  week in year, 
+  negative values, 
+  ... 
 
-* count hours backwards, in order to avoid DST changes
-  which usually occur in the first hours of the day
+* document: 
+  yearly( year_type => 'weekly' )
+  default: year_type => 'monthly'
 
-* POD: added year_type => 'weekly' to yearly.
-  default is year_type => 'monthly'.
+* iterate using binary search
 
-* datetime matrix implementation
-
-  - sort each unit ?
-
-  - iterate using binary search
+* implement/test/document:
+  yearly( week_start_day => 1 )
 
