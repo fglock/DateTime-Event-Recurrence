@@ -393,13 +393,18 @@ month>:
   my $last_day_of_month_set =
       monthly DateTime::Event::Recurrence( days => -1 );
 
-The constructors do not check for duration overflow, such as a
-duration bigger than the period.  The behaviour in this case is
-undefined and it might change between versions.
+When days are added to a month the result I<is> checked
+for month overflow (such as nonexisting day 31 or 30),
+and the invalid datetimes are skipped.
+
+The behaviour when other duration overflows occur, such as when a
+duration is bigger than the period, is undefined and
+is version dependent.
 
 Note that the 'hours' duration is affected by DST changes and might
 return unexpected results.  In particular, it would be possible to
 specify a recurrence that creates nonexistent datetimes.
+This behaviour might change in future versions.
 
 You can also provide multiple sets of duration arguments, such as
 this:
