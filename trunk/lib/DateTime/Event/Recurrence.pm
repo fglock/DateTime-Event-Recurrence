@@ -1184,6 +1184,8 @@ C<weekly> and C<yearly> recurrences.
 starts in this week-day, and has I<all days> in this period.  Works for
 C<weekly>, C<monthly> and C<yearly> recurrences.
 
+=back
+
 =head1 AUTHOR
 
 Flavio Soibelmann Glock
@@ -1191,7 +1193,7 @@ fglock@pucrs.br
 
 =head1 CREDITS
 
-The API was developmed with help from the people in the
+The API was developed with help from the people in the
 datetime@perl.org list.
 
 Special thanks to Dave Rolsky, 
