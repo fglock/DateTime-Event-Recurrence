@@ -8,55 +8,64 @@ use DateTime::Set;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.0';
+$VERSION = '0.00_01';
 
-sub new {
-    my $class = shift;
-    my %args = validate(
-      @_, {
-          frequency => { type => SCALAR, optional => 0 },
-      }
-    );
+# -------- CONSTRUCTORS
 
-    return bless \%args, $class;
-}
+BEGIN {
+    # setup constructors daily, monthly, ...
+    my @freq = qw( 
+        year   years   yearly
+        month  months  monthly
+        day    days    daily
+        hour   hours   hourly
+        minute minutes minutely
+        second seconds secondly );
+    while ( @freq ) 
+    {
+        my ( $name, $names, $namely ) = ( shift @freq, shift @freq, shift @freq );
+        my $sub = "
+            sub ".__PACKAGE__."::$namely {
+                my \$class = shift;
+                carp \"$namely takes no arguments\" if \@_;
+                bless {
+                   next => sub { 
+                       \$_[0]->truncate( to => '$name' )->add( $names => 1 ) 
+                   }
+                }, \$class;
+            } ";
+        # warn $sub;
+        eval $sub;
+        warn $@ if $@;
+    }
+} # BEGIN
+
+# ------- ACCESSORS
 
 sub as_set {
-    my $self  = shift;
-    return DateTime::Set->from_recurrence( recurrence =>    
-        sub {
-            my $tmp = $self->next( $_[0] );
-            return $tmp;
-        }
-    );
+    my $self = shift;
+    unless ( exists $self->{set} ) 
+    {
+        $self->{set} = DateTime::Set->from_recurrence( 
+                           recurrence => $self->{next} );
+    }
+    return $self->{set};
+}
+
+sub as_list {
+    my $self = shift;
+    my $span = DateTime::Span->new ( @_ );
+    $self->as_set->intersection( $span )->as_list;
 }
 
 sub is_event {
     my $self = shift;
-    my $dt   = shift;
-    croak( "Dates need to be DateTime objects (" . ref($dt) . ")" )
-      unless ( ref($dt) eq 'DateTime' );
-    return sunrise( $self, $dt ) ? 1 : 0;
+    $self->as_set->intersects( $_[0] );
 }
 
 sub next {
     my $self = shift;
-    my $dt   = shift;
-    # warn "following_sunrise: dt isa ".ref($dt);
-    croak( "Dates need to be DateTime objects (" . ref($dt) . ")" )
-      unless ( $dt->isa( 'DateTime' ) );
-    my $d = DateTime::Duration->new(
-      days => 1,
-    );
-    # warn "following_sunrise: from ".$dt->datetime;
-    if ( $self->is_sunrise($dt) ) {
-        my $new_dt = $dt + $d;
-        my ( $tmp_rise, undef ) = sunrise( $self, $new_dt );
-        # warn "following_sunrise: got ".$tmp_rise->datetime;
-        # warn "ERROR ERROR ERROR" if $tmp_rise < $dt;
-        return $tmp_rise;
-    }
-    # warn "following_sunrise: got ???";
+    $self->{next} ( $_[0] );
 }
 
 =head1 NAME
@@ -64,6 +73,7 @@ sub next {
 DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurrences
 
 =head1 SYNOPSIS
+
  use DateTime;
  use DateTime::Event::Recurrence;
  
@@ -72,11 +82,11 @@ DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurr
                          day    => 20,
                   );
 
- my $r_daily = DateTime::Event::Recurrence->new(
-	                frequency => 'daily'
-		  );
+ my $r_daily = daily DateTime::Event::Recurrence;
 
  my $dt_next = $daily->next( $dt );
+
+ my $bool = $daily->is_elem( $dt );
 
  my $set_days = $r_daily->as_set( start =>$dt1, end=>$dt2 );
 
@@ -85,7 +95,7 @@ DateTime::Event::Recurrence - Perl DateTime extension for computing basic recurr
  my $set = $r_daily->intersection($dt_span);
  my $iter = $set->iterator;
  while ( my $dt = $iter->next ) {
-  print ' ',$dt->datetime;
+     print ' ',$dt->datetime;
  }
 
 =head1 DESCRIPTION
@@ -94,16 +104,29 @@ This module will return a DateTime Recurrence object for a given recurrence rule
 
 =head1 USAGE
 
- my $r_daily = DateTime::Event::Recurrence->new(
-                        frequency => 'daily'
-                  );
+=item yearly monthly daily hourly minutely secondly
 
-frequency can be one of 'yearly', 'monthly', 'daily', 'hourly', 
-'minutely', 'secondly'.
+ my $r_daily = daily DateTime::Event::Recurrence;
 
-=item my $r_set = $sunrise->as_set;
+Build a DateTime::Event::Recurrence object.
+
+=item * as_set
+
+  my $r_set = $r_daily->as_set;
 
 This builds a DateTime::Set recurrence set.
+
+=item * as_list
+
+  my @dt = $r_daily->as_list( $span );
+
+This builds a DateTime array of events that happen inside the span.
+
+=item * is_event
+
+  my $bool = $r_daily->is_event( $dt );
+
+Verify if a DateTime is a recurrence event.
 
 =back
 
