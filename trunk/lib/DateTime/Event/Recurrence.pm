@@ -13,6 +13,12 @@ package DateTime::Set::ICal;
         return undef unless $self->{as_ical};
         return @{ $self->{as_ical} };  
     }
+    sub clone {
+        my $self = shift;
+        my $new = $self->SUPER::clone( @_ );
+        $new->set_ical( $self->get_ical );
+        $new;
+    }
     sub union {
         my $self = shift;
         my $new = $self->SUPER::union( @_ );
