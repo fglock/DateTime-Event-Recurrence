@@ -49,7 +49,7 @@ use DateTime::Event::Recurrence;
                            nanosecond => 123456,
                            time_zone => 'UTC' );
 
-    my $weekly = weekly DateTime::Event::Recurrence( days => 2 ); # Wed
+    my $weekly = weekly DateTime::Event::Recurrence( days => 3 ); # Wed
     my $dt;
 
     $dt = $weekly->next( $dt1 );

@@ -14,7 +14,7 @@ use DateTime::Event::Recurrence;
                            time_zone => 'UTC' );
 
     my $month = monthly DateTime::Event::Recurrence ( 
-        days => [ 30, 14 ],
+        days => [ 31, 15 ],
         minutes => [ 30 ] );
 
     my $dt;
@@ -46,7 +46,7 @@ use DateTime::Event::Recurrence;
                            time_zone => 'UTC' );
 
     my $month = monthly DateTime::Event::Recurrence (
-        days => [ 30 ],
+        days => [ 31 ],
         minutes => [ 30 ] );
 
     my $dt;

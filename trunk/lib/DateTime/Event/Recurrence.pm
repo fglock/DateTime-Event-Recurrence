@@ -121,6 +121,8 @@ sub _setup_parameters {
             $args{$unit} = [ $args{$unit} ] 
                 unless ref( $args{$unit} ) eq 'ARRAY';
 
+            @{$args{$unit}} = sort @{$args{$unit}};
+
             $duration->[ $level ] = [];
 
             # TODO: add overflow checks for other units
@@ -139,10 +141,24 @@ sub _setup_parameters {
                         grep { $_ < 24 && $_ > -24 } @{$args{$unit}};
             }
             elsif ( $unit eq 'days' ) {
+                # days start in '1'
+                for ( @{$args{$unit}} ) {
+                    warn 'days cannot be zero' unless $_;
+                    $_-- if $_ > 0;
+                }
                 if ( $args{base} eq 'month' || exists $args{month} ) 
                 {   # month day
                     @{$args{$unit}} = 
                         grep { $_ < 31 && $_ > -31 } @{$args{$unit}};
+
+                    # prepare to do more overflow checks at runtime
+                    # TODO: remove [$level] in @check_day_overflow
+
+                    for ( 0 .. $#{$args{$unit}} ) {
+                        $check_day_overflow[$level][$_] = 1 
+                            if ( $args{$unit}[$_] > 28 );
+                    }
+
                 }
                 elsif ( $args{base} eq 'week' || exists $args{week} ) 
                 {   # week day
@@ -156,28 +172,29 @@ sub _setup_parameters {
                 }
             }
             elsif ( $unit eq 'months' ) {
-                    @{$args{$unit}} =
-                        grep { $_ < 12 && $_ > -12 } @{$args{$unit}};
+                # months start in '1'
+                for ( @{$args{$unit}} ) {
+                    warn 'months cannot be zero' unless $_;
+                    $_-- if $_ > 0;
+                }
+                @{$args{$unit}} =
+                    grep { $_ < 12 && $_ > -12 } @{$args{$unit}};
             }
             elsif ( $unit eq 'weeks' ) {
-                    @{$args{$unit}} =
-                        grep { $_ < 53 && $_ > -53 } @{$args{$unit}};
+                # weeks start in '1'
+                for ( @{$args{$unit}} ) {
+                    warn 'weeks cannot be zero' unless $_;
+                    $_-- if $_ > 0;
+                }
+                @{$args{$unit}} =
+                    grep { $_ < 53 && $_ > -53 } @{$args{$unit}};
             }
 
             return -1 unless @{$args{$unit}};  # error - no args left
 
             push @{ $duration->[ $level ] }, 
                 new DateTime::Duration( $unit => $_ ) 
-                    for sort @{$args{$unit}};
-
-            # prepare to do more overflow checks at runtime
-
-            for ( 0 .. $#{$args{$unit}} ) {
-                $check_day_overflow[$level][$_] = 1 
-                    if ( $args{base} eq 'month' || exists $args{month} ) &&
-                       ( $unit eq 'days' ) &&
-                       ( $duration->[$level][$_]->is_positive );
-            }
+                    for @{$args{$unit}};
 
             $level++;
         }
@@ -399,10 +416,10 @@ recurrence at 10:30 each day, we can do:
   my $daily_at_10_30_set =
       daily DateTime::Event::Recurrence( hours => 10, minutes => 30 );
 
-To represent every I<Tuesday>:
+To represent every I<Tuesday> (second day of week):
 
   my $weekly_on_tuesday_set =
-      weekly DateTime::Event::Recurrence( days => 1 );
+      weekly DateTime::Event::Recurrence( days => 2 );
 
 A negative duration counts backwards from the end of the period.  This
 is the same as is specified in RFC 2445.
