@@ -1081,7 +1081,7 @@ fglock@pucrs.br
 
 =head1 CREDITS
 
-The API is under development, with help from the people
+The API was developmed with help from the people
 in the datetime@perl.org list. 
 
 Special thanks to Dave Rolsky, 
