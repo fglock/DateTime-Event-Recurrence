@@ -124,24 +124,44 @@ sub _setup_parameters {
             $duration->[ $level ] = [];
 
             # TODO: add overflow checks for other units
-            # and for negative values
+            # TODO: use a hash instead of if-else
 
-            if ( $unit eq 'days' ) {
+            if ( $unit eq 'seconds' ) {
+                    @{$args{$unit}} =
+                        grep { $_ < 60 && $_ > -60 } @{$args{$unit}};
+            }
+            elsif ( $unit eq 'minutes' ) {
+                    @{$args{$unit}} =
+                        grep { $_ < 60 && $_ > -60 } @{$args{$unit}};
+            }
+            elsif ( $unit eq 'hours' ) {
+                    @{$args{$unit}} =
+                        grep { $_ < 24 && $_ > -24 } @{$args{$unit}};
+            }
+            elsif ( $unit eq 'days' ) {
                 if ( $args{base} eq 'month' || exists $args{month} ) 
                 {   # month day
                     @{$args{$unit}} = 
-                        grep { $_ < 31 && $_ >= -31 } @{$args{$unit}};
+                        grep { $_ < 31 && $_ > -31 } @{$args{$unit}};
                 }
                 elsif ( $args{base} eq 'week' || exists $args{week} ) 
                 {   # week day
                     @{$args{$unit}} = 
-                        grep { $_ < 7 && $_ >= -7 } @{$args{$unit}};
+                        grep { $_ < 7 && $_ > -7 } @{$args{$unit}};
                 }
                 else 
                 {   # year day
                     @{$args{$unit}} =
-                        grep { $_ < 366 && $_ >= -366 } @{$args{$unit}};
+                        grep { $_ < 366 && $_ > -366 } @{$args{$unit}};
                 }
+            }
+            elsif ( $unit eq 'months' ) {
+                    @{$args{$unit}} =
+                        grep { $_ < 12 && $_ > -12 } @{$args{$unit}};
+            }
+            elsif ( $unit eq 'weeks' ) {
+                    @{$args{$unit}} =
+                        grep { $_ < 53 && $_ > -53 } @{$args{$unit}};
             }
 
             return -1 unless @{$args{$unit}};  # error - no args left
@@ -405,6 +425,10 @@ Note that the 'hours' duration is affected by DST changes and might
 return unexpected results.  In particular, it would be possible to
 specify a recurrence that creates nonexistent datetimes.
 This behaviour might change in future versions.
+
+The value C<60> for seconds (leap second) is ignored. 
+If you i<really> want the leap second, then specify 
+the second as C<-1>.
 
 You can also provide multiple sets of duration arguments, such as
 this:
