@@ -119,6 +119,7 @@ sub weekly {
     }, $class;
 }
 
+
 # ------- ACCESSORS
 # these are (or should be) inheritable by other DateTime::Event::xxx classes
 
@@ -232,7 +233,9 @@ Build a DateTime::Event::Recurrence object.
 
 The constructors might take "duration" arguments:
 
-  my $r_daily_at_10 = daily DateTime::Event::Recurrence( hours => 10 );
+  my $r_daily_at_evening = daily DateTime::Event::Recurrence( duration => $evening );
+
+  my $r_daily_at_10_30 = daily DateTime::Event::Recurrence( hours => 10, minutes => 30 );
 
 Note: C<weekly> without arguments returns I<mondays>.
 
@@ -241,14 +244,13 @@ Note: C<weekly> without arguments returns I<mondays>.
 A negative duration has the meaning as specified in RFC2445:
 it counts backwards from the end of the period.
 
-This is useful for creating recurrences
-such as I<last day of month>:
+This is useful for creating recurrences such as I<last day of month>:
 
   my $r_last_day_of_month = monthly DateTime::Event::Recurrence( days => -1 );
 
-The constructors do not check for duration overflow, such as specifying
+The constructors do not check for duration overflow, such as 
 a duration bigger than the period. The behaviour in this case is 
-undefined and might change between versions.
+undefined and it might change between versions.
 
 =item * as_set
 
@@ -292,8 +294,10 @@ fglock@pucrs.br
 =head1 CREDITS
 
 The API is under development, with help from the people
-in the datetime@perl.org list. Special thanks to Dave Rolsky 
-and Ron Hill.
+in the datetime@perl.org list. 
+
+Special thanks to Dave Rolsky, 
+Ron Hill and Matt Sisk for being around with ideas.
 
 =head1 COPYRIGHT
 
