@@ -34,19 +34,24 @@ BEGIN {
             sub { use strict 'refs';
                   my $class = shift;
 
-                  my ( $duration, $min, $max ) = _setup_parameters(@_);
+                  # TODO: move these parameters into a hash
+                  my ( $duration, $min, $max, $check_day_overflow ) = 
+                     _setup_parameters( base => $name, @_ );
+                  return DateTime::Set->empty_set if $duration == -1;
 
                   my $next =
                       sub { my $tmp = $_[0]->clone;
                             $tmp->truncate( to => $name );
                             _get_next( $_[0], $tmp, $names,
-                                       $duration, $min, $max ); };
+                                       $duration, $min, $max, 
+                                       $check_day_overflow ); };
 
                   my $prev =
                       sub { my $tmp = $_[0]->clone;
                             $tmp->truncate( to => $name );
                             _get_previous( $_[0], $tmp, $names,
-                                           $duration, $min, $max ); };
+                                           $duration, $min, $max, 
+                                           $check_day_overflow ); };
 
                   return
                       DateTime::Set->from_recurrence
@@ -60,19 +65,23 @@ BEGIN {
 
 sub weekly {
     my $class = shift;
-    my ( $duration, $min, $max ) = _setup_parameters(@_);
+    my ( $duration, $min, $max, $check_day_overflow ) = 
+        _setup_parameters( base => 'week', @_);
+    return DateTime::Set->empty_set if $duration == -1;
     return DateTime::Set->from_recurrence(
         next => sub { 
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
                 ->subtract( days => $_[0]->day_of_week_0 );
-            _get_next( $_[0], $tmp, 'weeks', $duration, $min, $max );
+            _get_next( $_[0], $tmp, 'weeks', $duration, 
+                       $min, $max, $check_day_overflow );
         },
         previous => sub {
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
                  ->subtract( days => $_[0]->day_of_week_0 );
-            _get_previous( $_[0], $tmp, 'weeks', $duration, $min, $max );
+            _get_previous( $_[0], $tmp, 'weeks', $duration,
+                           $min, $max, $check_day_overflow );
         }
     );
 }
@@ -89,6 +98,7 @@ sub weekly {
 sub _setup_parameters {
     my %args = @_;
 
+    my @check_day_overflow;
     my $duration;  
     if ( exists $args{ duration } ) 
     {
@@ -113,10 +123,24 @@ sub _setup_parameters {
 
             $duration->[ $level ] = [];
 
+            # TODO: add overflow checks for other units
+            # and for negative values
+            if ( ( $args{base} eq 'month' || exists $args{month} ) &&
+                 ( $unit eq 'days' ) ) {
+                @{$args{$unit}} = grep { $_ < 31 } @{$args{$unit}};
+            }
+            return -1 unless @{$args{$unit}};  # error - no args left
+
             push @{ $duration->[ $level ] }, 
                 new DateTime::Duration( $unit => $_ ) 
                     for sort @{$args{$unit}};
 
+            for ( 0 .. $#{$args{$unit}} ) {
+                $check_day_overflow[$level][$_] = 1 
+                    if ( $args{base} eq 'month' || exists $args{month} ) &&
+                       ( $unit eq 'days' ) &&
+                       ( $duration->[$level][$_]->is_positive );
+            }
             $level++;
         }
     }
@@ -128,6 +152,7 @@ sub _setup_parameters {
         # pre-process each duration line; get min and max
         # such that we can look up the duration table in linear time
         # (it can be done in log time - maybe later...)
+
         my $i;
         for ( $i = $#$duration; $i >= 0; $i-- ) {
 
@@ -145,11 +170,11 @@ sub _setup_parameters {
         }
     }
 
-    return ( $duration, \@min, \@max );
+    return ( $duration, \@min, \@max, \@check_day_overflow );
 }
 
 sub _get_previous {
-    my ( $self, $base, $unit, $duration, $min, $max ) = @_;
+    my ( $self, $base, $unit, $duration, $min, $max, $check_day_overflow ) = @_;
     if ( $duration ) 
     {
         $base->subtract( $unit => 1 )
@@ -157,11 +182,25 @@ sub _get_previous {
         my $j = 0;
         my $next;
         my $i;
-        while(1) 
+        my $month;
+        GET_RECURRENCE: while(1) 
         {
             for ( $i = $#{ $duration->[$j] }; $i >= 0; $i-- ) 
             {
                 $next = $base + $duration->[$j][$i];
+
+                if ( $check_day_overflow->[$j][$i] ) {
+                    $month = $base->month unless $month;
+                    if ( $month != $next->month ) {
+                       # warn "day overflow [p]: ".$base->datetime." ".$next->datetime;
+                       next if $i > 0;
+                       $base->subtract( $unit => 1 );
+                       $j = 0;
+                       $month = undef;
+                       next GET_RECURRENCE;
+                    }
+                }
+
                 # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
                 if ( $j == $#{$duration} ) 
                 {
@@ -198,7 +237,7 @@ sub _get_previous {
 
 
 sub _get_next {
-    my ( $self, $base, $unit, $duration, $min, $max ) = @_;
+    my ( $self, $base, $unit, $duration, $min, $max, $check_day_overflow ) = @_;
     if ( $duration ) 
     {
         $base->add( $unit => 1 )
@@ -206,11 +245,25 @@ sub _get_next {
         my $j = 0;
         my $next;
         my $i;
-        while(1) 
+        my $month;
+        GET_RECURRENCE: while(1) 
         {
+            # warn "redo $j";
             for $i ( 0 .. $#{ $duration->[$j] } ) 
             {
                 $next = $base + $duration->[$j][$i];
+
+                if ( $check_day_overflow->[$j][$i] ) {
+                    $month = $base->month unless $month;
+                    if ( $month != $next->month ) {
+                       # warn "day overflow [n]: ".$base->datetime." ".$next->datetime;
+                       $base->add( $unit => 1 );
+                       $j = 0;
+                       $month = undef;
+                       next GET_RECURRENCE;
+                    }
+                }
+
                 # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
                 if ( $j == $#{$duration} ) 
                 {

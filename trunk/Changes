@@ -1,3 +1,8 @@
+- tests month-day overflow for positive day offsets, if 'month'
+  argument is specified. Skips a datetime if it is invalid.
+- setup structure to make other overflow tests.
+- returns empty set for 'impossible' recurrences.
+
 0.01
 - CPAN upload
 - no longer inherits DateTime::Set
