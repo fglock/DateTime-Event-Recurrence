@@ -17,6 +17,14 @@ TODO list for Perl module DateTime::Event::Recurrence
     $r = DT::E::R->monthly (
                        duration => \@durations );
 
+  implementation options:
+
+  - setup a single big @duration - doesn't work well with mixed 
+    positive and negative values
+
+  - sort each unit, with negative values at the end, then
+    iterate through each unit (binary search?)
+
 * experimental code
 
 # this is supposed to combine 2 events.

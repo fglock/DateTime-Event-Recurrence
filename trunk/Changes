@@ -1,3 +1,9 @@
+0.00_05
+
+- refactored constructor subs
+- added a very rough multiple-duration structure 
+  (doesn't work with mixed negative/positive durations)
+
 0.00_03
 
 - "duration" argument in constructors

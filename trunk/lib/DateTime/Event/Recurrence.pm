@@ -9,7 +9,7 @@ use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
 @ISA     = qw( Exporter );
-$VERSION = '0.00_04';
+$VERSION = '0.00_05';
 
 # -------- CONSTRUCTORS
 
@@ -28,43 +28,17 @@ BEGIN {
         my $sub = "
             sub ".__PACKAGE__."::$namely {
                 my \$class = shift;
-                my \%args = \@_;
-                my \$duration;   # closure
-                if ( exists \$args{ duration } ) {
-                    \$duration = delete \$args{ duration };
-                    \$duration = \$duration->clone;  # make it immutable
-                }
-                \$duration = new DateTime::Duration( \%args ) if keys \%args;
+                my \$duration = \&_setup_parameters;  # needs \&
                 bless {
                    next => sub { 
-
                        my \$tmp = \$_[0]->clone;
                        \$tmp->truncate( to => '$name' );
-                       if ( \$duration ) {
-                           \$tmp->add( $names => 1 ) 
-                               while ( \$tmp + \$duration ) <= \$_[0];
-                           \$tmp->add_duration( \$duration );
-                       }
-                       else {
-                           \$tmp->add( $names => 1 ) while \$tmp <= \$_[0];
-                       }
-                       return \$tmp;
-
+                       _get_next( \$_[0], \$tmp, '$names', \$duration );
                    },
                    previous => sub {
-
                        my \$tmp = \$_[0]->clone;
                        \$tmp->truncate( to => '$name' );
-                       if ( \$duration ) {
-                           \$tmp->subtract( $names => 1 )
-                               while ( \$tmp + \$duration ) >= \$_[0];
-                           \$tmp->add_duration( \$duration );
-                       }
-                       else {
-                           \$tmp->subtract( $names => 1 ) while \$tmp >= \$_[0];
-                       }
-                       return \$tmp;
-
+                       _get_previous( \$_[0], \$tmp, '$names', \$duration );
                    }
                 }, \$class;
             } ";
@@ -77,48 +51,83 @@ BEGIN {
 
 sub weekly {
     my $class = shift;
-    my %args = @_;
-    # day_of_week_0 = 0-6 (Monday is 0)
-    my $duration;   # closure
-    if ( exists $args{ duration } ) {
-        $duration = delete $args{ duration };
-        $duration = $duration->clone;  # make it immutable
-    }
-    $duration = new DateTime::Duration( %args ) if keys %args; 
+    my $duration = &_setup_parameters;  # needs &
     bless {
         next => sub { 
-            # warn 'next '.$_[0];
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
                 ->subtract( days => $_[0]->day_of_week_0 );
-            if ( $duration ) {
-                $tmp->add( days => 7 )
-                    while ( $tmp + $duration ) <= $_[0];
-                $tmp->add_duration( $duration );
-            }
-            else {
-                $tmp->add( days => 7 ) while $tmp <= $_[0];
-            }
-            return $tmp;
+            _get_next( $_[0], $tmp, 'weeks', $duration );
         },
         previous => sub {
-            # warn 'previous '.$_[0];
             my $tmp = $_[0]->clone;
             $tmp->truncate( to => 'day' )
                  ->subtract( days => $_[0]->day_of_week_0 );
-            if ( $duration ) {
-                $tmp->subtract( days => 7 )
-                    while ( $tmp + $duration ) >= $_[0];
-                $tmp->add_duration( $duration );
-            }
-            else {
-                $tmp->subtract( days => 7 ) while $tmp >= $_[0];
-            }
-            return $tmp;
+            _get_previous( $_[0], $tmp, 'weeks', $duration );
         }
     }, $class;
 }
 
+
+sub _setup_parameters {
+    my %args = @_;
+    my $duration;  
+    if ( exists $args{ duration } ) {
+        $duration = delete $args{ duration };
+        $duration = [ $duration ] if ref( $duration ) ne 'ARRAY';
+        # make durations immutable
+        $_ = $_->clone for @$duration;  
+    }
+    $duration = [ new DateTime::Duration( %args ) ] if keys %args; 
+    return $duration;
+}
+
+sub _get_previous {
+    my ( $self, $base, $unit, $duration ) = @_;
+    if ( $duration ) 
+    {
+        $base->subtract( $unit => 1 )
+            while ( $base + @$duration[0] ) >= $self;
+        my $result = $base->clone;
+        $result->add_duration( @$duration[0] );
+        for my $i ( 1 .. $#$duration ) {
+            my $next = $base->clone;
+            $next->add_duration( @$duration[$i] );
+            return $result if $next >= $self;
+            $result = $next;
+        }
+        $base = $result;
+    }
+    else 
+    {
+        $base->subtract( $unit => 1 ) while $base >= $self;
+    }
+    return $base;
+}
+
+sub _get_next {
+    my ( $self, $base, $unit, $duration ) = @_;
+    if ( $duration ) 
+    {
+        $base->add( $unit => 1 )
+            while ( $base + @$duration[-1] ) <= $self;
+        my $result = $base->clone;
+        $result->add_duration( @$duration[-1] );
+        my $i;
+        for ( $i = $#$duration, $i > 0, $i-- ) {
+            my $next = $base->clone;
+            $next->add_duration( @$duration[$i] );
+            return $result if $next <= $self;
+            $result = $next;
+        }
+        $base = $result;
+    }
+    else 
+    {
+        $base->add( $unit => 1 ) while $base <= $self;
+    }
+    return $base;
+}
 
 # ------- ACCESSORS
 # these are (or should be) inheritable by other DateTime::Event::xxx classes
