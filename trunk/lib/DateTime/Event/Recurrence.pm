@@ -10,7 +10,7 @@ package DateTime::Set::ICal;
     }
     sub get_ical { 
         my $self = shift;
-        return undef unless $self->{as_ical};
+        return unless $self->{as_ical};
         return @{ $self->{as_ical} };  
     }
     sub clone {
@@ -32,8 +32,11 @@ package DateTime::Set::ICal;
 
         bless $new, 'DateTime::Set::ICal';
         # warn " -- 1 isa @{[%op1]} -- 2 isa @{[%op2]} -- ";
-        my @ical = @{$op1{include}} if exists $op1{include};
-        if ( $op2 )
+        my @ical;
+        @ical = exists $op1{include} ? 
+                @{$op1{include}} : 
+                $self;
+        if ( exists $op2{include} )
         {
             push @ical, @{$op2{include}};
         }
@@ -58,18 +61,23 @@ package DateTime::Set::ICal;
 
         bless $new, 'DateTime::Set::ICal';
         # warn " -- 1 isa @{[%op1]} -- 2 isa @{[%op2]} -- ";
-        my @ical;
-        @ical = @{$op1{exclude}} if exists $op1{exclude};
-        if ( $op2 )
+        my ( @include, @exclude );
+        @include = exists $op1{include} ?
+                @{$op1{include}} :
+                $self;
+        @exclude = exists $op1{exclude} ?
+                @{$op1{exclude}} :
+                ();
+        if ( exists $op2{include} )
         {
-            push @ical, @{$op2{include}};
+            push @exclude, @{$op2{include}};
         }
         else
         {
-            push @ical, @_;  # whatever...
+            push @exclude, @_;  # whatever...
         }
-        # warn "complement: @ical";
-        $new->set_ical( include => $op1{include}, exclude => [ @ical ] ); 
+        # warn "complement: include @include exclude @exclude";
+        $new->set_ical( include => [ @include ], exclude => [ @exclude ] ); 
         $new;
     }
 
