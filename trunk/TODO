@@ -1,0 +1,5 @@
+TODO list for Perl module DateTime::Event::Recurrence
+
+* check what are the minimum dependencies requirements 
+  and fill in at Makefile.PL
+
