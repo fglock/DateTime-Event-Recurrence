@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 9;
+use Test::More tests => 11;
 
 use DateTime;
 use DateTime::SpanSet;
@@ -47,17 +47,16 @@ sub span_str { str($_[0]->min) . '..' . str($_[0]->max) }
     $dt = $r->next( $dt );
     is ( $dt->datetime, '2003-04-28T12:45:00', 'next intersection' );
 
-TODO: {
-    local $TODO = "S::I first/last intersection has problems";
+
     $dt = $r->previous( $dt1 );
     is ( str($dt), '2003-04-28T12:00:00', 'previous intersection' );
     if ( $dt ) {
         $dt = $r->previous( $dt );
-        is ( str($dt), '2003-04-28T11:45:00', 'previous intersection' );
+        is ( str($dt), '2003-04-28T10:45:00', 'previous intersection' );
         $dt = $r->previous( $dt );
-        is ( str($dt), '2003-04-28T11:30:00', 'previous intersection' );
+        is ( str($dt), '2003-04-28T10:30:00', 'previous intersection' );
     }
-} # TODO
+
 
 }
 
