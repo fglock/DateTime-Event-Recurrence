@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 4;
+use Test::More tests => 9;
 
 use DateTime;
 use DateTime::SpanSet;
@@ -64,7 +64,7 @@ sub span_str { str($_[0]->min) . '..' . str($_[0]->max) }
     is ( $dt, undef, 'next no-intersection' );
 }
 
-__END__
+
 {
     # BUILD SPAN-SET
 
@@ -74,7 +74,7 @@ __END__
                            time_zone => 'UTC' );
 
     my $r1 = yearly DateTime::Event::Recurrence (
-        months =>  [ 10, 14 ],
+        months =>  [ 9, 11 ],
         days =>    [ 15 ],
         hours =>   [ 14 ] );
 
@@ -86,13 +86,27 @@ __END__
     my $span;
     my $s;
 
-    my $iterator = 
+    # test Set
+    my $iterator =
+        $r1->intersection( DateTime::Span->new( after => $dt1 ) )
+          ->iterator;
+    $span = $iterator->next;
+    $s = str( $span );
+    is ( $s, '2003-09-15T14:00:00', 'next set' );
+    $span = $iterator->next;
+    $s = str( $span );
+    is ( $s, '2003-11-15T14:00:00', 'next set' );
+
+    # test SpanSet
+    $iterator = 
         $r->intersection( DateTime::Span->new( after => $dt1 ) )
           ->iterator;
-
     $span = $iterator->next;
     $s = span_str( $span );  
-    is ( $s, undef, 'next span-set' );
+    is ( $s, '2003-09-15T14:00:00..2003-09-15T15:00:00', 'next span-set' );
+    $span = $iterator->next;
+    $s = span_str( $span );
+    is ( $s, '2003-11-15T14:00:00..2003-11-15T15:00:00', 'next span-set' );
 
 }
 
