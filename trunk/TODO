@@ -1,5 +1,12 @@
 TODO list for Perl module DateTime::Event::Recurrence
 
+* new frequencies:
+  - yearly_week with other week-start-days (rfc2445 WKST style)
+  - yearly_week starting in first weekday of year (rfc2445 1FR style)
+
+    week_start_day => 'mo'   -- yearly 
+    week_start_day => '1mo'  -- yearly and monthly 
+
 * start parameter
   - is it just for synchronizing the interval?
   - interval extends to before 'start' (current implementation)

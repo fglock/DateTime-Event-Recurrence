@@ -21,6 +21,9 @@ use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
 
 use vars qw( %truncate %next_unit %previous_unit );
 
+my $week_start_day = 1;  # 1 = monday
+
+
 %truncate = (
     (
         map {
@@ -40,12 +43,22 @@ use vars qw( %truncate %next_unit %previous_unit );
     },
 
     years_weekly => sub {
-        my $tmp = $_[0]->clone;
-        my $week_number = $tmp->week_number - 1;
-        my $week_day =    $tmp->day_of_week_0;
-        # warn $tmp->datetime." is week $week_number day $week_day";
-        $tmp->truncate( to => 'day' )
-            ->subtract( days => $week_day, weeks => $week_number );
+        my $tmp;
+        my $base = $_[0]->clone->add( months => 1 )->truncate( to => 'year' );
+        # warn "start of ".$_[0]->datetime;
+        while(1) {
+            $tmp = $base->clone
+                        ->add( days =>  3 - ( ( 1 + $base->day_of_week + $week_start_day ) % 7 ) );
+            # warn "got ".$tmp->datetime;
+            return $tmp if $tmp <= $_[0];
+            $base->add( years => -1 );
+        }
+
+        # my $week_number = $tmp->week_number - 1;
+        # my $week_day =    $tmp->day_of_week_0;
+        # # warn $tmp->datetime." is week $week_number day $week_day";
+        # $tmp->truncate( to => 'day' )
+        #     ->subtract( days => $week_day, weeks => $week_number );
     },
 );
 
@@ -88,13 +101,14 @@ use vars qw( %truncate %next_unit %previous_unit );
 use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 
 %truncate_interval = (
-    # @_ = ( date, modulo, offset )
+    # @_ = ( date, $args )
+    # $args->{interval}, $args->{offset}
 
     years   => sub { 
         my $tmp = $_[0]->clone;
         $tmp->truncate( to => 'year' )
-            ->add( years => $_[2] - ( $_[0]->year % $_[1] ) );
-        $tmp->add( years => - $_[1] ) if $tmp > $_[0];
+            ->add( years => $_[1]{offset} - ( $_[0]->year % $_[1]{interval} ) );
+        $tmp->add( years => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
@@ -106,11 +120,11 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
         # print STDERR "datetime ".$tmp->datetime." months $months\n";
 
         $tmp->truncate( to => 'month' )
-            ->add( months => $_[2] - ( $months % $_[1] ) );
+            ->add( months => $_[1]{offset} - ( $months % $_[1]{interval} ) );
 
         # print STDERR "trunc 1  ".$tmp->datetime."\n";
 
-        $tmp->add( months => - $_[1] ) if $tmp > $_[0];
+        $tmp->add( months => - $_[1]{interval} ) if $tmp > $_[0];
 
         # print STDERR "trunc 2  ".$tmp->datetime."\n";
 
@@ -121,8 +135,8 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
         my $tmp = $_[0]->clone;
         #  $_[0]->{local_rd_days}  is not good OO ...
         $tmp->truncate( to => 'day' )
-            ->add( days => $_[2] - ( $_[0]->{local_rd_days} % $_[1] ) );
-        $tmp->add( days => - $_[1] ) if $tmp > $_[0];
+            ->add( days => $_[1]{offset} - ( $_[0]->{local_rd_days} % $_[1]{interval} ) );
+        $tmp->add( days => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
@@ -130,8 +144,8 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
         my $tmp = $_[0]->clone;
         my $hours = $tmp->{local_rd_days} * 24 + $tmp->hour;
         $tmp->truncate( to => 'hour' )
-            ->add( hours => $_[2] - ( $hours % $_[1] ) );
-        $tmp->add( hours => - $_[1] ) if $tmp > $_[0];
+            ->add( hours => $_[1]{offset} - ( $hours % $_[1]{interval} ) );
+        $tmp->add( hours => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
@@ -139,8 +153,8 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
         my $tmp = $_[0]->clone;
         my $minutes = 60 * ( $tmp->{local_rd_days} * 24 + $tmp->hour ) + $tmp->minute;
         $tmp->truncate( to => 'minute' )
-            ->add( minutes => $_[2] - ( $minutes % $_[1] ) );
-        $tmp->add( minutes => - $_[1] ) if $tmp > $_[0];
+            ->add( minutes => $_[1]{offset} - ( $minutes % $_[1]{interval} ) );
+        $tmp->add( minutes => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
@@ -153,16 +167,16 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
         # print STDERR "seconds ".$tmp->{local_rd_days}.",".$tmp->{local_rd_secs}." = $seconds\n"; 
 
         $tmp->truncate( to => 'second' )
-            ->add( seconds => $_[2] - ( $seconds % $_[1] ) );
-        $tmp->add( seconds => - $_[1] ) if $tmp > $_[0];
+            ->add( seconds => $_[1]{offset} - ( $seconds % $_[1]{interval} ) );
+        $tmp->add( seconds => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
     weeks   => sub { 
         my $tmp = $_[0]->clone;
         $tmp->truncate( to => 'day' )
-            ->add( days => $_[2] - ( $_[0]->{local_rd_days} % ( 7 * $_[1] ) ) );
-        $tmp->add( weeks => - $_[1] ) if $tmp > $_[0];
+            ->add( days => $_[1]{offset} - ( $_[0]->{local_rd_days} % ( 7 * $_[1]{interval} ) ) );
+        $tmp->add( weeks => - $_[1]{interval} ) if $tmp > $_[0];
         return $tmp;
     },
 
@@ -170,7 +184,7 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
         # print STDERR $_[0]->datetime."\n";
         my $tmp = $truncate{years_weekly}( $_[0] );
         # print STDERR "  trunc " . $tmp->datetime."\n";
-        while ( $_[2] != ( $tmp->week_year % $_[1] ) ) 
+        while ( $_[1]{offset} != ( $tmp->week_year % $_[1]{interval} ) ) 
         {
             $previous_unit{years_weekly}( $tmp );
             # print STDERR "    prev " . $tmp->datetime."\n";
@@ -460,7 +474,7 @@ __COMMENT
         if ( $start && $interval )
         {
             # get offset 
-            my $tmp = $truncate_interval{ $base }( $start, $interval );
+            my $tmp = $truncate_interval{ $base }( $start, { interval => $interval, offset => 0 } );
             # print STDERR "start: ".$start->datetime."\n";
             # print STDERR "base: ".$tmp->datetime." $base\n";
 
@@ -649,7 +663,7 @@ sub _get_occurence_by_index {
 
 sub _get_previous {
     my ( $self, $args ) = @_;
-    my $base = $args->{truncate}( $self, $args->{interval}, $args->{offset} );
+    my $base = $args->{truncate}( $self, $args );
 
     if ( $args->{duration} ) 
     {
@@ -715,7 +729,7 @@ sub _get_previous {
 
 sub _get_next {
     my ( $self, $args ) = @_;
-    my $base = $args->{truncate}( $self, $args->{interval}, $args->{offset} );
+    my $base = $args->{truncate}( $self, $args );
 
     # warn "_get_next parameters: @{[ %$args ]}";
 
