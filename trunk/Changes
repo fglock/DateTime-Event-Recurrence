@@ -1,3 +1,8 @@
+0.00_11
+
+- added 'set' tests
+- docs correction. Dave Rolsky
+
 0.00_10
 
 - ISA DateTime::Set
