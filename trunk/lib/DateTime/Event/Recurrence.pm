@@ -300,7 +300,26 @@ sub _setup_parameters {
         # such that we can look up the duration table in linear time
         # (it can be done in log time - maybe later...)
 
-        my $i;
+        # "compact" durations by adding together levels 
+        #     that only have 1 duration
+        # this cuts calls to 'add_duration' by about 10% in 
+        #     'make test'
+        my $i = 1;
+        do {
+            if ( $i <= $#$duration &&
+                 $#{ $duration->[$i] } == 0  && 
+                 $i > 0 ) 
+            {
+                # print STDERR "Testing  $i $#{ $duration->[$i] }\n";
+                my $dur = $duration->[$i][0];
+                $_ = $_ + $dur for @{ $duration->[$i - 1] };
+                # print STDERR "delete dur $i\n";
+                splice ( @$duration, $i, 1);
+                $i--;  # repeat
+            }
+            $i++;
+        } until $i > $#$duration;
+
         for ( $i = $#$duration; $i >= 0; $i-- ) {
 
             # make durations immutable
