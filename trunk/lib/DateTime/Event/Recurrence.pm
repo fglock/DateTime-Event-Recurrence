@@ -93,7 +93,7 @@ sub _setup_parameters {
         }
         else {
             die "argument 'duration' must be an array of arrays"
-                if ( ref( @{$duration}[0] ) ne 'ARRAY' ) 
+                if ( ref( $duration->[0] ) ne 'ARRAY' ) 
         }
     }
     elsif ( keys %args ) {
@@ -102,7 +102,7 @@ sub _setup_parameters {
             if ( exists $args{$unit} ) {
                 $args{$unit} = [ $args{$unit} ] 
                     unless ref( $args{$unit} ) eq 'ARRAY';
-                @{$duration}[ $level ] = [];
+                $duration->[ $level ] = [];
                 push @{ $duration->[ $level ] }, 
                     new DateTime::Duration( $unit => $_ ) 
                     for sort @{$args{$unit}};
@@ -124,8 +124,8 @@ sub _setup_parameters {
             # make durations immutable
             $_ = $_->clone for @{ $duration->[$i] };  
   
-            $min[$i] = ${$duration}[$i][0];
-            $max[$i] = ${$duration}[$i][-1];
+            $min[$i] = $duration->[$i][0];
+            $max[$i] = $duration->[$i][-1];
             if ( $i < $#$duration ) {
                 $min[$i] += $min[$i + 1];
                 $max[$i] += $max[$i + 1];
@@ -143,14 +143,14 @@ sub _get_previous {
     if ( $duration ) 
     {
         $base->subtract( $unit => 1 )
-            while ( $base + @$min[0] ) >= $self;
+            while ( $base + $min->[0] ) >= $self;
 
         my $j = 0;
         my $next;
         my $i;
         while(1) {
 
-            for ( $i = $#{@$duration[$j]}; $i >= 0; $i-- ) {
+            for ( $i = $#{ $duration->[$j] }; $i >= 0; $i-- ) {
                 # my $next = $base->clone;
                 # $next->add_duration( ${$duration}[$j][$i] );
                 # return $next if $next < $self;
@@ -166,7 +166,7 @@ sub _get_previous {
                         last; # return $next;
                     }
                 }
-                elsif (( $next + @$min[ $j + 1 ] ) < $self )
+                elsif (( $next + $min->[ $j + 1 ] ) < $self )
                 {
                     # print " #$j $i next ". $next->datetime ." \n";
                     last; # return $next;
@@ -211,7 +211,7 @@ sub _get_next {
         my $i;
         while(1) {
 
-            for $i ( 0 .. $#{@$duration[$j]} ) {
+            for $i ( 0 .. $#{ $duration->[$j] } ) {
                 $next = $base + ${$duration}[$j][$i];
                 # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
                 if ( $j == $#{$duration} ) 
