@@ -18,7 +18,10 @@ use DateTime::Event::Recurrence;
 
     
     my $yearly = yearly DateTime::Event::Recurrence(
-                         year_type => 'weekly' );
+           weeks => 1 );
+
+           #              year_type => 'weekly' );
+
     my @dt = $yearly->as_list( start => $dt1, end => $dt2 );
     my $r = join(' ', map { $_->datetime } @dt);
     is( $r, 
@@ -26,7 +29,7 @@ use DateTime::Event::Recurrence;
         "yearly-weekly" );
 
     $yearly = yearly DateTime::Event::Recurrence(
-                         year_type => 'weekly',
+                         # year_type => 'weekly',
                          weeks => [ 2 ] );
     @dt = $yearly->as_list( start => $dt1, end => $dt2 );
     $r = join(' ', map { $_->datetime } @dt);
@@ -36,8 +39,11 @@ use DateTime::Event::Recurrence;
 
 
     $yearly = yearly DateTime::Event::Recurrence(
-                         year_type => 'weekly',
-                         days => [ -7 ] );
+                         weeks => -1 );
+
+                         # year_type => 'weekly',
+                         # days => [ -7 ] );
+
     @dt = $yearly->as_list( start => $dt1, end => $dt2 );
     $r = join(' ', map { $_->datetime } @dt);
     is( $r,
@@ -46,7 +52,7 @@ use DateTime::Event::Recurrence;
 
 
     $yearly = yearly DateTime::Event::Recurrence(
-                         year_type => 'weekly',
+                         # year_type => 'weekly',
                          weeks => [ -1 ] );
     @dt = $yearly->as_list( start => $dt1, end => $dt2 );
     $r = join(' ', map { $_->datetime } @dt);
@@ -55,7 +61,7 @@ use DateTime::Event::Recurrence;
         "yearly-weekly week -1" );
 
     $yearly = yearly DateTime::Event::Recurrence(
-                         year_type => 'weekly',
+                         # year_type => 'weekly',
                          weeks => [ -1, 2 ] );
     @dt = $yearly->as_list( start => $dt1, end => $dt2 );
     $r = join(' ', map { $_->datetime } @dt);

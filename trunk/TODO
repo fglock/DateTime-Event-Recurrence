@@ -1,17 +1,31 @@
 TODO list for Perl module DateTime::Event::Recurrence
 
+* start parameter
+  - is it just for synchronizing the interval?
+  - interval extends to before 'start' (current implementation)
+  - other options:
+    Span start
+    DTSTART meaning
+
+* find out how it behaves with mixed timezones
+
+* more tests for invalid month-day
+
+* allow interleaved neg/positive values
+    my $month = monthly DateTime::Event::Recurrence (
+        days => [ -1, 31, 15 ],
+        minutes => [ 30 ] );
+
+
+* interval
+  - finish tests for offset (base-date)
+  - test it near DST changes
+  - should not use {local_rd_days} directly
+  - POD
+
 * add more argument overflow tests:
   day in year, 
   week in year, 
   negative values, 
   ... 
-
-* document: 
-  yearly( year_type => 'weekly' )
-  default: year_type => 'monthly'
-
-* iterate using binary search
-
-* implement/test/document:
-  yearly( week_start_day => 1 )
 
