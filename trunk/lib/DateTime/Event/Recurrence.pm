@@ -130,7 +130,7 @@ sub _setup_parameters {
                 $min[$i] += $min[$i + 1];
                 $max[$i] += $max[$i + 1];
             }
-            # print " i= $i n= $#$duration ". Dumper( @{$duration}[$i] )."\n";
+            # print " i= $i n= $#$duration ". Dumper( $duration->[$i] )."\n";
             # print " ".  Dumper( $min[$i] ) ." .. ". Dumper( $max[$i] )."\n";
         }
     }
@@ -152,11 +152,11 @@ sub _get_previous {
 
             for ( $i = $#{ $duration->[$j] }; $i >= 0; $i-- ) {
                 # my $next = $base->clone;
-                # $next->add_duration( ${$duration}[$j][$i] );
+                # $next->add_duration( $duration->[$j][$i] );
                 # return $next if $next < $self;
 
 
-                $next = $base + ${$duration}[$j][$i];
+                $next = $base + $duration->[$j][$i];
                 # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
                 if ( $j == $#{$duration} ) 
                 {
@@ -212,7 +212,7 @@ sub _get_next {
         while(1) {
 
             for $i ( 0 .. $#{ $duration->[$j] } ) {
-                $next = $base + ${$duration}[$j][$i];
+                $next = $base + $duration->[$j][$i];
                 # print " #$j-$#{$duration} $i self ".$self->datetime." next ". $next->datetime ." \n";
                 if ( $j == $#{$duration} ) 
                 {
