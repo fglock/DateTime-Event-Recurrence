@@ -121,7 +121,7 @@ sub _setup_parameters {
             $args{$unit} = [ $args{$unit} ] 
                 unless ref( $args{$unit} ) eq 'ARRAY';
 
-            @{$args{$unit}} = sort @{$args{$unit}};
+            @{$args{$unit}} = sort { $a <=> $b } @{$args{$unit}};
 
             $duration->[ $level ] = [];
 
