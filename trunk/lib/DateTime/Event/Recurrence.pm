@@ -1,97 +1,106 @@
+use strict;
 
 package DateTime::Set::ICal;
-    # a "dt::set" with a symbolic string representation 
-    @ISA = qw( DateTime::Set );
-    sub set_ical { # include list, exclude list
-        my $self = shift;
-        # warn "set_ical @_";
-        $self->{as_ical} = [ @_ ];
-        $self; 
-    }
-    sub get_ical { 
-        my $self = shift;
-        return unless $self->{as_ical};
-        return @{ $self->{as_ical} };  
-    }
-    sub clone {
-        my $self = shift;
-        my $new = $self->SUPER::clone( @_ );
-        $new->set_ical( $self->get_ical );
-        $new;
-    }
-    sub union {
-        my $self = shift;
-        my $new = $self->SUPER::union( @_ );
 
-        # RFC2445 - op1, op2 must have no 'exclude'
-        my (%op1, %op2);
-        %op1 = ( $self->get_ical ) if ( UNIVERSAL::can( $self, 'get_ical' ) );
-        %op2 = ( $_[0]->get_ical ) if ( UNIVERSAL::can( $_[0], 'get_ical' ) );
-        return $new if ( ( exists $op1{exclude} ) ||
-                         ( exists $op2{exclude} ) );
+use vars qw(@ISA);
 
-        bless $new, 'DateTime::Set::ICal';
-        # warn " -- 1 isa @{[%op1]} -- 2 isa @{[%op2]} -- ";
-        my @ical;
-        @ical = exists $op1{include} ? 
-                @{$op1{include}} : 
-                $self;
-        if ( exists $op2{include} )
-        {
-            push @ical, @{$op2{include}};
-        }
-        else
-        {
-            push @ical, @_;  # whatever...
-        }
-        # warn "union: @ical";
-        $new->set_ical( include => [ @ical ] ); 
-        $new;
+# a "dt::set" with a symbolic string representation 
+@ISA = qw( DateTime::Set );
+
+sub set_ical { # include list, exclude list
+    my $self = shift;
+    # warn "set_ical @_";
+    $self->{as_ical} = [ @_ ];
+    $self; 
+}
+
+sub get_ical { 
+    my $self = shift;
+    return unless $self->{as_ical};
+    return @{ $self->{as_ical} };  
+}
+
+sub clone {
+    my $self = shift;
+    my $new = $self->SUPER::clone( @_ );
+    $new->set_ical( $self->get_ical );
+    $new;
+}
+
+sub union {
+    my $self = shift;
+    my $new = $self->SUPER::union( @_ );
+
+    # RFC2445 - op1, op2 must have no 'exclude'
+    my (%op1, %op2);
+    %op1 = ( $self->get_ical ) if ( UNIVERSAL::can( $self, 'get_ical' ) );
+    %op2 = ( $_[0]->get_ical ) if ( UNIVERSAL::can( $_[0], 'get_ical' ) );
+    return $new if ( ( exists $op1{exclude} ) ||
+		     ( exists $op2{exclude} ) );
+
+    bless $new, 'DateTime::Set::ICal';
+    # warn " -- 1 isa @{[%op1]} -- 2 isa @{[%op2]} -- ";
+    my @ical;
+    @ical = exists $op1{include} ? 
+	    @{$op1{include}} : 
+	    $self;
+
+    if ( exists $op2{include} )
+    {
+	push @ical, @{$op2{include}};
     }
-    sub complement {
-        my $self = shift;
-        my $new = $self->SUPER::complement( @_ );
-        return $new unless @_;
-
-        # RFC2445 - op2 must have no 'exclude'
-        my (%op1, %op2);
-        %op1 = ( $self->get_ical ) if ( UNIVERSAL::can( $self, 'get_ical' ) );
-        %op2 = ( $_[0]->get_ical ) if ( UNIVERSAL::can( $_[0], 'get_ical' ) );
-        return $new if ( exists $op2{exclude} );
-
-        bless $new, 'DateTime::Set::ICal';
-        # warn " -- 1 isa @{[%op1]} -- 2 isa @{[%op2]} -- ";
-        my ( @include, @exclude );
-        @include = exists $op1{include} ?
-                @{$op1{include}} :
-                $self;
-        @exclude = exists $op1{exclude} ?
-                @{$op1{exclude}} :
-                ();
-        if ( exists $op2{include} )
-        {
-            push @exclude, @{$op2{include}};
-        }
-        else
-        {
-            push @exclude, @_;  # whatever...
-        }
-        # warn "complement: include @include exclude @exclude";
-        $new->set_ical( include => [ @include ], exclude => [ @exclude ] ); 
-        $new;
+    else
+    {
+	push @ical, @_;  # whatever...
     }
+    # warn "union: @ical";
+    $new->set_ical( include => [ @ical ] ); 
+    $new;
+}
+
+sub complement {
+    my $self = shift;
+    my $new = $self->SUPER::complement( @_ );
+    return $new unless @_;
+
+    # RFC2445 - op2 must have no 'exclude'
+    my (%op1, %op2);
+    %op1 = ( $self->get_ical ) if ( UNIVERSAL::can( $self, 'get_ical' ) );
+    %op2 = ( $_[0]->get_ical ) if ( UNIVERSAL::can( $_[0], 'get_ical' ) );
+    return $new if ( exists $op2{exclude} );
+
+    bless $new, 'DateTime::Set::ICal';
+    # warn " -- 1 isa @{[%op1]} -- 2 isa @{[%op2]} -- ";
+    my ( @include, @exclude );
+    @include = exists $op1{include} ?
+	       @{$op1{include}} :
+	       $self;
+
+    @exclude = exists $op1{exclude} ?
+               @{$op1{exclude}} :
+               ();
+
+    if ( exists $op2{include} )
+    {
+	push @exclude, @{$op2{include}};
+    }
+    else
+    {
+	push @exclude, @_;  # whatever...
+    }
+    # warn "complement: include @include exclude @exclude";
+    $new->set_ical( include => [ @include ], exclude => [ @exclude ] ); 
+    $new;
+}
 
 package DateTime::Event::Recurrence;
 
 use strict;
-require Exporter;
-use Carp;
 use DateTime;
 use DateTime::Set;
 use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION @ISA );
-@ISA     = qw( Exporter );
 $VERSION = 0.07;
 
 use constant INFINITY     =>       100 ** 100 ** 100 ;
