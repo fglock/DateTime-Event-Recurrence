@@ -386,7 +386,7 @@ the ones used by C<crontab> and in C<RFC2445>.
 
     my $daily = daily DateTime::Event::Recurrence ( 
         hours => [ -1, 10, 14 ],
-        minutes => [ -15, 30, -15 ] );
+        minutes => [ 15, 30, -15 ] );
 
 specifies a recurrence occuring everyday at these 9 different times:
 
