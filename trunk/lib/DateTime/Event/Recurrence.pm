@@ -100,21 +100,26 @@ sub _truncate_to_year_weekly {
 }
 
 sub _increment_year_weekly {
-    my $tmp = shift;
+    my $tmp = $_[0]->clone;
     my $year = $tmp->week_year;
     do {
         $tmp->add( months => 11 );
-    } until $year < $tmp->year;
-    _truncate_to_year_weekly( $tmp );
+        # warn "added $year >= ".$tmp->datetime." ".$tmp->week_year;
+    } while $year >= $tmp->week_year;
+    # warn "truncate  ".$tmp->datetime." ".$tmp->week_year;
+    $tmp = _truncate_to_year_weekly( $tmp );
+    # warn "increment ".$_[0]->datetime." ".$_[0]->week_year." = ".$tmp->datetime." ".$tmp->week_year;
+    return $tmp;
 }
 
 sub _decrement_year_weekly {
-    my $tmp = shift;
+    my $tmp = $_[0]->clone;
     my $year = $tmp->week_year;
     do {
         $tmp->subtract( months => 11 );
-    } until $year > $tmp->year;
-    _truncate_to_year_weekly( $tmp );
+    } while $year <= $tmp->week_year;
+    $tmp = _truncate_to_year_weekly( $tmp );
+    return $tmp;
 }
 
 
