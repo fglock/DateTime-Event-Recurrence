@@ -1,3 +1,10 @@
+0.00_10
+
+- ISA DateTime::Set
+- removed as_set
+- moved all accessors to DateTime::Set
+- requires DT::Set 0.02
+
 0.00_09
 
 - new syntax
