@@ -19,18 +19,23 @@ use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
 
 # -------- BASE OPERATIONS
 
-use vars qw( %truncate %next_unit %previous_unit );
+use vars qw( 
+    %truncate %next_unit %previous_unit 
+    %weekdays %weekdays_1 
+    $dur_month $dur_neg_month 
+);
 
-#my $week_start_day = 1;  # 1 = monday
-
-my %weekdays = qw( mo 1 tu 2 we 3 th 4 fr 5 sa 6 su 7 );
-
-my %weekdays_1 = qw( 1mo 1  1tu 2  1we 3  1th 4  1fr 5  1sa 6  1su 7 );
+BEGIN {
+    %weekdays =   qw( mo 1 tu 2 we 3 th 4 fr 5 sa 6 su 7 );
+    %weekdays_1 = qw( 1mo 1  1tu 2  1we 3  1th 4  1fr 5  1sa 6  1su 7 );
+    $dur_month =  DateTime::Duration->new( months => 1 );
+    $dur_neg_month =  DateTime::Duration->new( months => -1 );
+}
 
 sub _week_year {
     # get the internal year number, in 'week' mode
     # the datetime must be near the beginning of the year!
-    return $_[0]->clone->add( months => 1 )->year;
+    return $_[0]->clone->add_duration( $dur_month )->year;
 }
 
 sub _month {
@@ -84,13 +89,13 @@ sub _week {
             $tmp->add( days =>  $diff );
             # print STDERR "got ".$tmp->datetime." val $val base-day:".$weekdays{ $_[1]{week_start_day} }." ".$base->day_of_week." diff ".$diff."\n";
             return $tmp if $tmp <= $_[0];
-            $base->add( months => -1 );
+            $base->add_duration( $dur_neg_month );
         }
     },
 
     years_weekly => sub {
         my $tmp;
-        my $base = $_[0]->clone->add( months => 1 )->truncate( to => 'year' );
+        my $base = $_[0]->clone->add_duration( $dur_month )->truncate( to => 'year' );
         my $val;
         my $diff;
         # print STDERR "start of ".$_[0]->datetime. " $_[1]{week_start_day}\n";
@@ -338,10 +343,7 @@ use vars qw( %truncate_interval %next_unit_interval %previous_unit_interval );
 # -------- CONSTRUCTORS
 
 BEGIN {
-    # setup constructors daily, monthly, ...
-        # years   yearly
-        # months monthly
-        # weeks   weekly
+    # setup constructors daily, ...
     my @freq = qw(
         days    daily
         hours   hourly
@@ -501,13 +503,9 @@ sub yearly {
 }
 
 
-# method( duration => $dur )
-# method( duration => [ [ $dur, $dur, $dur ] ] )
 # method( hours => 10 )
 # method( hours => 10, minutes => 30 )
 # method( hours => [ 6, 12, 18 ], minutes => [ 20, 40 ] )
-# method( duration => [ [ $dur, $dur ], 
-#                       [ $dur, $dur ] ] )
 
 sub _setup_parameters {
     my %args;
@@ -523,22 +521,6 @@ sub _setup_parameters {
 
     # TODO: @duration instead of $duration
     my $duration;  
-
-my $comment = <<'__COMMENT';
-    # 'duration' argument is obsolete
-    if ( exists $args{ duration } ) 
-    {
-        $duration = delete $args{ duration };
-        if ( ref( $duration ) ne 'ARRAY' ) 
-        {
-            $duration = [ [ $duration ] ];
-        }
-        else {
-            die "argument 'duration' must be an array of arrays"
-                if ( ref( $duration->[0] ) ne 'ARRAY' ) 
-        }
-    }
-__COMMENT
 
     if ( @_ ) {
         %args = @_;
@@ -563,12 +545,6 @@ __COMMENT
             undef $start if $start == INFINITY || $start == NEG_INFINITY;
         }
 
-        if ( $start )
-        {
-            # TODO: get missing arguments from $start (rfc2445)
-
-        }
-
         for my $unit ( 
                  qw( months weeks days hours minutes seconds nanoseconds ) 
             ) {
@@ -577,6 +553,8 @@ __COMMENT
 
             $args{$unit} = [ $args{$unit} ] 
                 unless ref( $args{$unit} ) eq 'ARRAY';
+
+            # TODO: sort _after_ normalization
 
             @{$args{$unit}} = sort { $a <=> $b } @{$args{$unit}};
             # put positive values first
@@ -695,17 +673,13 @@ __COMMENT
             # print STDERR "start: ".$start->datetime."\n";
             # print STDERR "base: ".$tmp->datetime." $base\n";
 
-            # TODO: get scalar offset (truncated to base unit)
-            #
-            # - must change this to use the same difference algorithm as
+            # TODO: - must change this to use the same difference algorithm as
             #   the subs above.
-            #
 
             if ( $base eq 'years' ) {
                 $offset = $start->year - $tmp->year;
                 $offset = $start->year_week - $tmp->year_week 
                     if exists $args{weeks};
-                # print STDERR "offset $offset\n";
             }
             elsif ( $base eq 'months' ) {
                 $offset = _month( $start ) - _month( $tmp );
@@ -744,30 +718,6 @@ __COMMENT
     my $total_durations = 1;
     if ( $duration ) {
         my $i;
-
-my $comment = <<'__COMMENT';
-        # "compact" durations by adding together levels 
-        #     that only have 1 duration
-        # this cuts calls to 'add_duration' by about 10% in 
-        #     'make test'
-        # TODO: test: There might be problems when compacting negative 
-        #     durations over positive durations
-        $i = 1;
-        do {
-            if ( $i <= $#$duration &&
-                 $#{ $duration->[$i] } == 0  && 
-                 $i > 0 ) 
-            {
-                # print STDERR "Testing  $i $#{ $duration->[$i] }\n";
-                my $dur = $duration->[$i][0];
-                $_ = $_ + $dur for @{ $duration->[$i - 1] };
-                # print STDERR "delete dur $i\n";
-                splice ( @$duration, $i, 1);
-                $i--;  # repeat
-            }
-            $i++;
-        } until $i > $#$duration;
-__COMMENT
 
         for ( $i = $#$duration; $i >= 0; $i-- ) {
 
