@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 use DateTime;
 use DateTime::SpanSet;
@@ -46,12 +46,24 @@ sub span_str { str($_[0]->min) . '..' . str($_[0]->max) }
     is ( $dt->datetime, '2003-04-28T12:30:00', 'next intersection' );
     $dt = $r->next( $dt );
     is ( $dt->datetime, '2003-04-28T12:45:00', 'next intersection' );
+
+TODO: {
+    local $TODO = "S::I first/last intersection has problems";
+    $dt = $r->previous( $dt1 );
+    is ( str($dt), '2003-04-28T12:00:00', 'previous intersection' );
+    if ( $dt ) {
+        $dt = $r->previous( $dt );
+        is ( str($dt), '2003-04-28T11:45:00', 'previous intersection' );
+        $dt = $r->previous( $dt );
+        is ( str($dt), '2003-04-28T11:30:00', 'previous intersection' );
+    }
+} # TODO
+
 }
 
 {
     # NO-INTERSECTION
 
-    # TODO!
     my $dt1 = new DateTime( year => 2003, month => 4, day => 28,
                            hour => 12, minute => 10, second => 45,
                            nanosecond => 123456,
@@ -74,4 +86,6 @@ sub span_str { str($_[0]->min) . '..' . str($_[0]->max) }
     $dt = $r->next( $dt1 );
     is ( $dt, undef, 'next no-intersection' );
 }
+
+    # TODO - make a test that has an intersection, but that is hard to find.
 
