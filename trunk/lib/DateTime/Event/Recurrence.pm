@@ -99,15 +99,19 @@ sub _setup_parameters {
     elsif ( keys %args ) {
         my $level = 0;
         for my $unit ( qw( months weeks days hours minutes seconds nanoseconds ) ) {
-            if ( exists $args{$unit} ) {
-                $args{$unit} = [ $args{$unit} ] 
-                    unless ref( $args{$unit} ) eq 'ARRAY';
-                $duration->[ $level ] = [];
-                push @{ $duration->[ $level ] }, 
-                    new DateTime::Duration( $unit => $_ ) 
+
+            next unless exists $args{$unit};
+
+            $args{$unit} = [ $args{$unit} ] 
+                unless ref( $args{$unit} ) eq 'ARRAY';
+
+            $duration->[ $level ] = [];
+
+            push @{ $duration->[ $level ] }, 
+                new DateTime::Duration( $unit => $_ ) 
                     for sort @{$args{$unit}};
-                $level++;
-            } 
+
+            $level++;
         }
     }
 
@@ -171,10 +175,6 @@ sub _get_previous {
                     # print " #$j $i next ". $next->datetime ." \n";
                     last; # return $next;
                 }
-
-
-
-
             }
 
             $base = $next;
@@ -186,7 +186,6 @@ sub _get_previous {
             }
             $j++;
         }
-
     }
     else 
     {
