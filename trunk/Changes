@@ -1,3 +1,7 @@
+0.04   2003-05-14
+- turn on warnings in tests and fix all warnings given.
+- require DateTime::Set 0.06
+
 0.03   2003-05-12
 - iterates using binary tree
 - parameter checking
