@@ -104,7 +104,7 @@ use DateTime::Set;
 use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION );
-$VERSION = '0.15_02';
+$VERSION = '0.16';
 
 use constant INFINITY     =>       100 ** 100 ** 100 ;
 use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
@@ -141,7 +141,7 @@ BEGIN {
     
     %ical_name =  qw( 
         months  BYMONTH   
-        weeks   BYWEEK 
+        weeks   BYWEEKNO 
         days    BYMONTHDAY  
         hours   BYHOUR
         minutes BYMINUTE 
