@@ -104,7 +104,7 @@ use DateTime::Set;
 use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION );
-$VERSION = '0.16';
+$VERSION = '0.17';
 
 use constant INFINITY     =>       100 ** 100 ** 100 ;
 use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
@@ -820,6 +820,7 @@ sub _get_previous {
     my ( $self, $args ) = @_;
 
     return $self if $self->is_infinite;
+    $self->set_time_zone( 'floating' );
 
     my $base = $args->{truncate_interval}->( $self, $args );
     my ( $next, $i, $start, $end );
@@ -867,6 +868,7 @@ sub _get_next {
     my ( $self, $args ) = @_;
 
     return $self if $self->is_infinite;
+    $self->set_time_zone( 'floating' );
 
     my $base = $args->{truncate_interval}->( $self, $args );
     my ( $next, $i, $start, $end );
