@@ -1107,7 +1107,7 @@ The C<week_start_day> represents how the 'first week' of a period is
 calculated:
 
 "mo" - this is the default.  The first week is one that starts in
-monday, and has I<the most days> in this period.
+Monday, and has I<the most days> in this period.
 
 "tu", "we", "th", "fr", "sa", "su" - The first week is one that starts
 in this week-day, and has I<the most days> in this period.  Works for
