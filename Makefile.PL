@@ -10,5 +10,14 @@ use ExtUtils::MakeMaker;
                    PREREQ_PM    => { 'DateTime' => 0.27,  # local_rd_values
                                      'DateTime::Set' => '0.17',
                                    },
+                   META_MERGE   => { 'meta-spec' => { version => 2 },
+                                     resources => {
+                                        repository => {
+                                            type => 'git',
+                                            url => 'https://github.com/fglock/DateTime-Event-Recurrence.git',
+                                            web => 'https://github.com/fglock/DateTime-Event-Recurrence',
+                                        },
+                                     },
+                                   },
                  );
 
