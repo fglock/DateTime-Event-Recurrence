@@ -1106,15 +1106,15 @@ C<DateTime::Event::ICal> module, for generating RFC2445 recurrences.
 The C<week_start_day> represents how the 'first week' of a period is
 calculated:
 
-"mo" - this is the default.  The first week is one that starts in
-Monday, and has I<the most days> in this period.
+Defaults to "1mo"
+Yearly recurrences default to "mo" (C<yearly()>)
 
-"tu", "we", "th", "fr", "sa", "su" - The first week is one that starts
-in this week-day, and has I<the most days> in this period.  Works for
+"mo", "tu", "we", "th", "fr", "sa", "su" - The first week is one that starts
+on this week-day, and has I<the most days> in this period.  Works for
 C<weekly> and C<yearly> recurrences.
 
-"1tu", "1we", "1th", "1fr", "1sa", "1su" - The first week is one that
-starts in this week-day, and has I<all days> in this period.  This
+"1mo", "1tu", "1we", "1th", "1fr", "1sa", "1su" - The first week is one that
+starts on this week-day, and has I<all days> in this period.  This
 works for C<weekly()>, C<monthly()> and C<yearly()> recurrences.
 
 =head2 Time Zones
