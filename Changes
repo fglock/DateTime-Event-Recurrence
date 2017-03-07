@@ -1,3 +1,6 @@
+0.18  2015-11-11
+- added a test; depends on DateTime::Set 0.3600
+
 0.17  2005-08-11
 - added a test and fixed a bug where the parameter to
   next($dt) had a timezone. Reported by Simon Wistow.

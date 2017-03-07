@@ -8,7 +8,7 @@ use ExtUtils::MakeMaker;
                    ABSTRACT     => 'DateTime base recurrences',
 
                    PREREQ_PM    => { 'DateTime' => 0.27,  # local_rd_values
-                                     'DateTime::Set' => '0.17',
+                                     'DateTime::Set' => '0.3600',
                                    },
                    META_MERGE   => { 'meta-spec' => { version => 2 },
                                      resources => {
