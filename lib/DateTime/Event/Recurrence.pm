@@ -104,7 +104,7 @@ use DateTime::Set;
 use DateTime::Span;
 use Params::Validate qw(:all);
 use vars qw( $VERSION );
-$VERSION = '0.18';
+$VERSION = '0.19';
 
 use constant INFINITY     =>       100 ** 100 ** 100 ;
 use constant NEG_INFINITY => -1 * (100 ** 100 ** 100);
@@ -1044,7 +1044,7 @@ recurrences, resulting in six possible meanings:
     # 10th day of every month
     my $set = DateTime::Event::Recurrence->monthly( days => 10 );
 
-    # second tuesday of every month
+    # second full week of every month, on tuesday
     my $set = DateTime::Event::Recurrence->monthly( weeks => 2, days => 2 );
 
     # 10th day of every year
@@ -1053,7 +1053,7 @@ recurrences, resulting in six possible meanings:
     # 10th day of every december
     my $set = DateTime::Event::Recurrence->yearly( months => 12, days => 10 );
 
-    # second tuesday of every year
+    # second week of every year, on tuesday
     my $set = DateTime::Event::Recurrence->yearly( weeks => 2, days => 2 );
 
 Week days can also be called by name, as is specified in RFC 2445 (iCal):
@@ -1062,11 +1062,15 @@ Week days can also be called by name, as is specified in RFC 2445 (iCal):
       DateTime::Event::Recurrence->weekly( days => 'tu' );
       
 The "days" parameter defaults to "the first day".
-See also the section on the "week start day" parameter.
+See also the section on the "week_start_day" parameter.
     
-    # second monday of every month
+    # second full week of every month, on monday
     my $set = DateTime::Event::Recurrence->monthly( weeks => 2 );
-    
+
+    # second tuesday of every month
+    my $set = DateTime::Event::Recurrence->monthly( weeks => 2, days => "tu", week_start_day => "1tu" );
+
+
 =head2 The "interval" and "start" Parameters
 
 The "interval" parameter represents how often the recurrence rule repeats. 
@@ -1100,14 +1104,8 @@ The "start" parameter should have no time zone.
 
 =head2 The "week_start_day" Parameter
 
-The C<week_start_day> parameter is intended for internal use by the
-C<DateTime::Event::ICal> module, for generating RFC2445 recurrences.
-
 The C<week_start_day> represents how the 'first week' of a period is
 calculated:
-
-Defaults to "1mo"
-Yearly recurrences default to "mo" (C<yearly()>)
 
 "mo", "tu", "we", "th", "fr", "sa", "su" - The first week is one that starts
 on this week-day, and has I<the most days> in this period.  Works for
@@ -1116,6 +1114,9 @@ C<weekly> and C<yearly> recurrences.
 "1mo", "1tu", "1we", "1th", "1fr", "1sa", "1su" - The first week is one that
 starts on this week-day, and has I<all days> in this period.  This
 works for C<weekly()>, C<monthly()> and C<yearly()> recurrences.
+
+The C<week_start_day> defaults to "1mo",
+except in yearly (C<yearly()>) recurrences which default to "mo".
 
 =head2 Time Zones
 
@@ -1154,7 +1155,7 @@ I<really> want the leap second, then specify the second as C<-1>.
 =head1 AUTHOR
 
 Flavio Soibelmann Glock
-fglock@pucrs.br
+fglock@gmail.com
 
 =head1 CREDITS
 
