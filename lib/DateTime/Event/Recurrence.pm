@@ -1075,7 +1075,16 @@ See also the section on the "week_start_day" parameter.
 
 The "interval" parameter represents how often the recurrence rule repeats. 
 
-The optional "start" parameter specifies where to start counting:
+The optional "start" parameter specifies where to start counting.
+
+The "start" parameter does not provide boundaries for the set.
+It only provides an anchor for calculation of where the "interval" starts.
+In order to limit the set, an intersection with a DateTime::Span can be used.
+Alternately, the as_list() method accepts DateTime::Span parameters as well.
+
+The "start" parameter should have no time zone.
+
+Example:
 
     my $dt_start = DateTime->new( year => 2003, month => 6, day => 15 );
 
@@ -1100,7 +1109,6 @@ In this case, the method is used to specify the unit, so C<daily()>
 means that our unit is a day, and C<< interval => 11 >> specifies the
 quantity of our unit.
 
-The "start" parameter should have no time zone.
 
 =head2 The "week_start_day" Parameter
 
